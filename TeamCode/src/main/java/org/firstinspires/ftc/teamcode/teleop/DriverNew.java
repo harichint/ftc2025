@@ -16,7 +16,7 @@ public class DriverNew extends OpMode {
     private DcMotor rightBack;
 
     // --- Constants ---
-    private static final double DRIVE_POWER = 0.5;  // Base power for forward/reverse
+    private static final double DRIVE_POWER = 1;  // Base power for forward/reverse
     private static final double STRAFE_POWER = 0.6; // Base power for strafing
 
     @Override
@@ -39,7 +39,7 @@ public class DriverNew extends OpMode {
             leftFront.setPower(DRIVE_POWER);
             rightFront.setPower(DRIVE_POWER);
             leftBack.setPower(DRIVE_POWER);
-            rightBack.setPower(DRIVE_POWER);
+            rightBack.setPower(-DRIVE_POWER);
             telemetry.addData("Mode", "Driving Forward");
 
         } else if (gamepad1.a) {
@@ -47,7 +47,7 @@ public class DriverNew extends OpMode {
             leftFront.setPower(-DRIVE_POWER);
             rightFront.setPower(-DRIVE_POWER);
             leftBack.setPower(-DRIVE_POWER);
-            rightBack.setPower(-DRIVE_POWER);
+            rightBack.setPower(DRIVE_POWER);
             telemetry.addData("Mode", "Driving Reverse");
 
         } else if (gamepad1.x) {
@@ -55,7 +55,7 @@ public class DriverNew extends OpMode {
             leftFront.setPower(-STRAFE_POWER);
             rightFront.setPower(STRAFE_POWER);
             leftBack.setPower(STRAFE_POWER);
-            rightBack.setPower(-STRAFE_POWER);
+            rightBack.setPower(STRAFE_POWER);
             telemetry.addData("Mode", "Strafing Left");
 
         } else if (gamepad1.b) {
@@ -63,7 +63,7 @@ public class DriverNew extends OpMode {
             leftFront.setPower(STRAFE_POWER);
             rightFront.setPower(-STRAFE_POWER);
             leftBack.setPower(-STRAFE_POWER);
-            rightBack.setPower(STRAFE_POWER);
+            rightBack.setPower(-STRAFE_POWER);
             telemetry.addData("Mode", "Strafing Right");
 
         } else {
@@ -101,7 +101,7 @@ public class DriverNew extends OpMode {
         // TUNE THIS based on your robot's behavior.
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightFront.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
     }
 }
