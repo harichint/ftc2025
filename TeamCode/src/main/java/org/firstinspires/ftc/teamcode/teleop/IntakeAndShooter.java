@@ -38,9 +38,9 @@ public class IntakeAndShooter extends OpMode {
         conveyorBelt = hardwareMap.get(DcMotor.class, "conveyor_belt");
 
         // --- Set Motor & Servo Directions ---
-        intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE); // Spins to pull balls in
-        conveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE); // Spins to push balls up/out
+        intakeRoller.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to pull balls in
         intakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
+        conveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
 
         // Ensure everything is stopped on initialization
         stopAll();

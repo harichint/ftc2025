@@ -7,12 +7,12 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
-import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.util.ElapsedTime;
+
 import java.util.Arrays;
 
-@Autonomous(name = "Red Far Autonomous")
-public class RedFarAutonomous extends LinearOpMode {
+@Autonomous(name = "Far Hardcoded Auto")
+public class FarHardCodedAutonomous extends LinearOpMode {
 
     // --- HARDWARE ---
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
@@ -26,9 +26,12 @@ public class RedFarAutonomous extends LinearOpMode {
     static final double WHEEL_DIAMETER_INCHES = 3.78;
     static final double ROBOT_TRACK_WIDTH_INCHES = 14.0;   // Distance between left and right wheels
     static final double LAUNCH_ANGLE_DEGREES = 40.0;
-
     private static final double SHOOTER_CONVEYOR_POWER = 1.0;
     private static final double GATE_SERVO_POWER = 1.0;
+
+    // --- ALLIANCE SELECTION ---
+    private enum GoalDirection { LEFT, RIGHT }
+    private GoalDirection selectedAlliance = GoalDirection.RIGHT; // Default to Right side goal
 
     // --- SEQUENCE LOGIC ---
     public enum BallColor { GREEN, PURPLE, UNKNOWN }
@@ -41,23 +44,40 @@ public class RedFarAutonomous extends LinearOpMode {
     public void runOpMode() {
         initializeHardware();
 
-        telemetry.addLine("--- Ready to Run Red Far Autonomous ---");
+        // =============================== ALLIANCE SELECTION LOOP ===============================
+        // This loop runs during the INIT phase, before the driver presses START.
+        while (!isStarted() && !isStopRequested()) {
+            telemetry.addLine("--- Alliance Selection ---");
+            telemetry.addData("Selected Alliance", selectedAlliance);
+            telemetry.addLine("\nPress 'B' on Gamepad 1 for Right side goal post");
+            telemetry.addLine("Press 'X' on Gamepad 1 for Left side goal post");
+            telemetry.update();
+
+            if (gamepad1.b) {
+                selectedAlliance = GoalDirection.RIGHT;
+            }
+            if (gamepad1.x) {
+                selectedAlliance = GoalDirection.LEFT;
+            }
+        }
+        // =====================================================================================
+
+        telemetry.addData("Ready to Run for", selectedAlliance + " Alliance");
         telemetry.update();
+
         waitForStart();
 
         // --- AUTONOMOUS SEQUENCE ---
 
-        // Step 1: Drive forward until we see the white line or a sequence tag.
-        telemetry.addLine("Step 1: Driving to line or tag...");
+        // Step 1: Drive diagonally - 70 inches forward
+        telemetry.addLine("Step 1: Driving 70 inches forward.");
         telemetry.update();
-        BallColor[] detectedSequence = driveUntilLineOrTag(0.7);
+        driveMecanum(70, 35, 0.7); // Drive 70 forward, 35 right, at 70% power
 
-        // Step 2: If we didn't find a tag while driving, do a stationary scan.
-        if (detectedSequence == null) {
-            telemetry.addLine("Step 2: Reached line, now scanning...");
-            telemetry.update();
-            detectedSequence = readSequenceFromObelisk(3.0); // Scan for 2 seconds
-        }
+        // Step 2: Now that we have arrived, scan for the sequence tag obelisk.
+        telemetry.addLine("Step 2: Arrived, now scanning obelisk...");
+        telemetry.update();
+        BallColor[] detectedSequence = readSequenceFromObelisk(2.0); // Scan for 2 seconds
 
         telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
         telemetry.update();
@@ -65,32 +85,33 @@ public class RedFarAutonomous extends LinearOpMode {
 
         // --- Conditional Logic: Only proceed if a sequence was found ---
         if (detectedSequence[0] != BallColor.UNKNOWN) {
-            // Step 3: Turn right until the goal tag is visible.
-            telemetry.addLine("Step 3: Turning to find Red Goal...");
-            telemetry.update();
-            turnUntilTagVisible(new int[]{20, 24}, -0.3); // Turn right
 
-            // Step 4: Verify with the color sensor.
-            telemetry.addLine("Step 4: Verifying goal color...");
+            // Step 3: Turn towards the correct goal based on the selected alliance.
+            telemetry.addLine("Step 3: Turning towards goal...");
             telemetry.update();
-            sleep(500);
-            if (isSeeingRed()) {
-                telemetry.addLine("SUCCESS: Confirmed Red Goal.");
-            } else {
-                telemetry.addLine("WARNING: Red Goal not detected!");
+            if (selectedAlliance == GoalDirection.RIGHT) {
+                turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
+            } else { // Alliance is BLUE
+                turnRobot(LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
             }
-            sleep(1500);
 
-            // Step 5: Shoot.
+            // Step 4: shooting.
             runShooter();
-            telemetry.addLine("Step 5: Shooting...");
+            telemetry.addLine("Step 4: Shoot 3 balls...");
             telemetry.update();
+            sleep(1500); // Run shooter for 1.5 seconds
 
-            // Step 6: Reposition after shooting.
-            telemetry.addLine("Step 6: Repositioning...");
+            // Step 5: Reposition after shooting.
+            if (selectedAlliance == GoalDirection.RIGHT) {
+                turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn LEFT to straighten out
+            } else { // Alliance is BLUE
+                turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT to straighten out
+            }
+
+            // Step 6: Drive backward.
+            telemetry.addLine("Step 6: Driving backward...");
             telemetry.update();
-            turnRobot(LAUNCH_ANGLE_DEGREES, 0.5);      // Turn left
-            driveDistance(-10, 0.8);  // Move backward
+            driveDistance(-10, 0.4);  // Move backward
         } else {
             // If the obelisk scan failed, stop here.
             telemetry.addLine("ERROR: No sequence found. Stopping.");
@@ -107,6 +128,7 @@ public class RedFarAutonomous extends LinearOpMode {
         conveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
         intakeGate.setPower(GATE_SERVO_POWER);
     }
+
 
     //----------------------------------------------------------------------------------------------
     // INITIALIZATION & HELPER METHODS
@@ -143,31 +165,6 @@ public class RedFarAutonomous extends LinearOpMode {
         huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
     }
 
-    /** Drives forward while simultaneously checking for a white line or a sequence tag. */
-    private BallColor[] driveUntilLineOrTag(double power) {
-        setDrivePower(power);
-        while (opModeIsActive()) {
-            // Check for sequence tags first
-            HuskyLens.Block[] blocks = huskyLens.blocks();
-            if (blocks.length > 0) {
-                for (HuskyLens.Block tag : blocks) {
-                    if (tag.id == 1) { setDrivePower(0); return SEQ_1; }
-                    if (tag.id == 2) { setDrivePower(0); return SEQ_2; }
-                    if (tag.id == 3) { setDrivePower(0); return SEQ_3; }
-                }
-            }
-            // If no tag, check for the white line
-            if (isSeeingWhite()) {
-                setDrivePower(0);
-                return null; // Stopped at line, no tag found
-            }
-            telemetry.addData("Status", "Driving until line or tag...");
-            telemetry.update();
-        }
-        setDrivePower(0);
-        return null;
-    }
-
     /** Performs a stationary scan for a sequence tag for a given duration. */
     private BallColor[] readSequenceFromObelisk(double scanSeconds) {
         ElapsedTime scanTimer = new ElapsedTime();
@@ -182,49 +179,38 @@ public class RedFarAutonomous extends LinearOpMode {
             }
             sleep(50);
         }
-        return SEQ_UNKNOWN;
+        telemetry.addLine("ERROR: No sequence tag found. Default sequence loaded.");
+        return SEQ_1;
     }
 
-    /** Turns the robot until a target AprilTag ID is visible or a timeout occurs. */
-    private void turnUntilTagVisible(int[] targetIds, double power) {
-        setDriveRunMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        leftFrontDrive.setPower(power);
-        leftBackDrive.setPower(power);
-        rightFrontDrive.setPower(-power);
-        rightBackDrive.setPower(-power);
-
-        ElapsedTime timeoutTimer = new ElapsedTime();
-        while (opModeIsActive() && timeoutTimer.seconds() < 5.0) {
-            for (HuskyLens.Block tag : huskyLens.blocks()) {
-                for (int targetId : targetIds) {
-                    if (tag.id == targetId) {
-                        setDrivePower(0);
-                        telemetry.addData("SUCCESS", "Found Tag ID: " + tag.id);
-                        return; // Exit method
-                    }
-                }
-            }
-            sleep(20);
-        }
-        setDrivePower(0); // Stop if timed out
-        telemetry.addLine("WARNING: Turn timed out without finding tag.");
-    }
-
-    /** Drives the robot a specific distance using encoders. */
+    /** Drives the robot a specific distance in inches using encoders. */
     private void driveDistance(double distanceInches, double power) {
+        if (!opModeIsActive()) return;
+        driveMecanum(distanceInches, 0, power); // Use the new method for straight movement
+    }
+
+    /** Drives the robot diagonally using forward and strafe distances. */
+    private void driveMecanum(double forwardInches, double strafeInches, double power) {
+        if (!opModeIsActive()) return;
+
         double countsPerInch = COUNTS_PER_MOTOR_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
-        int targetTicks = (int) (distanceInches * countsPerInch);
+
+        // Mecanum drive formulas to calculate individual wheel targets
+        int lfTicks = (int)((forwardInches + strafeInches) * countsPerInch);
+        int rfTicks = (int)((forwardInches - strafeInches) * countsPerInch);
+        int lbTicks = (int)((forwardInches - strafeInches) * countsPerInch);
+        int rbTicks = (int)((forwardInches + strafeInches) * countsPerInch);
 
         setDriveRunMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        setTargetPosition(targetTicks, targetTicks, targetTicks, targetTicks);
+        setTargetPosition(lfTicks, rfTicks, lbTicks, rbTicks);
         setDriveRunMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         setDrivePower(power);
-        while (opModeIsActive() && leftFrontDrive.isBusy()) {
-            telemetry.addData("Driving", "%.2f inches", ticksToInches(leftFrontDrive.getCurrentPosition()));
-            telemetry.update();
+        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
+            // Optional: telemetry while driving
         }
         setDrivePower(0);
+        setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     /** Turns the robot a specific angle using encoders. */
@@ -234,26 +220,16 @@ public class RedFarAutonomous extends LinearOpMode {
         int targetTicks = (int) (turnDistance * countsPerInch);
 
         setDriveRunMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        // For a left turn (positive angle), left wheels go forward, right wheels go backward.
         setTargetPosition(targetTicks, -targetTicks, targetTicks, -targetTicks);
         setDriveRunMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         setDrivePower(power);
         while (opModeIsActive() && leftFrontDrive.isBusy()) {
-            telemetry.addData("Turning", "%.1f degrees", ticksToInches(leftFrontDrive.getCurrentPosition()) / (Math.PI * ROBOT_TRACK_WIDTH_INCHES) * 360.0);
-            telemetry.update();
+            // Optional telemetry
         }
         setDrivePower(0);
-    }
-
-    /** Checks for a strong red signal from the color sensor. */
-    private boolean isSeeingRed() {
-        NormalizedRGBA colors = colorSensor.getNormalizedColors();
-        return (colors.alpha > 0.05f) && (colors.red > colors.blue * 1.5) && (colors.red > colors.green * 1.5);
-    }
-
-    /** Checks for a bright white signal from the color sensor. */
-    private boolean isSeeingWhite() {
-        return colorSensor.getNormalizedColors().alpha > 0.6f; // Tune this brightness threshold
+        setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     // --- LOW-LEVEL MOTOR CONTROL ---
@@ -275,8 +251,4 @@ public class RedFarAutonomous extends LinearOpMode {
         leftBackDrive.setTargetPosition(lb);
         rightBackDrive.setTargetPosition(rb);
     }
-    private double ticksToInches(int ticks) {
-        return (ticks / COUNTS_PER_MOTOR_REV) * (Math.PI * WHEEL_DIAMETER_INCHES);
-    }
-
 }

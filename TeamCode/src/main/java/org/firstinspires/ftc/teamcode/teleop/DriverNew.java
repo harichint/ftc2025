@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-@TeleOp(name = "DriverNew: Combined Drivetrain", group = "Drivetrain")
+@TeleOp(name = "DriverNew: Joystick Drive", group = "Drivetrain") // Updated name for clarity
 public class DriverNew extends OpMode {
 
     // --- Hardware Members ---
@@ -15,66 +15,53 @@ public class DriverNew extends OpMode {
     private DcMotor leftBack;
     private DcMotor rightBack;
 
-    // --- Constants ---
-    private static final double DRIVE_POWER = 1;  // Base power for forward/reverse
-    private static final double STRAFE_POWER = 0.6; // Base power for strafing
-
     @Override
     public void init() {
         // Initialize all drivetrain motors using the helper method
         initDrivetrain(hardwareMap);
-        telemetry.addLine("Ready to Drive!");
-        telemetry.addLine("> Y: Forward");
-        telemetry.addLine("> A: Reverse");
-        telemetry.addLine("> X: Strafe Left");
-        telemetry.addLine("> B: Strafe Right");
+        telemetry.addLine("Ready for Joystick Control!");
+        telemetry.addLine("> Left Stick: Forward/Backward/Strafe");
+        telemetry.addLine("> Right Stick: Rotate");
         telemetry.update();
     }
 
     @Override
     public void loop() {
-        // This if-else if structure ensures that only one movement command is processed at a time.
-        if (gamepad1.y) {
-            // Drive Forward
-            leftFront.setPower(DRIVE_POWER);
-            rightFront.setPower(DRIVE_POWER);
-            leftBack.setPower(DRIVE_POWER);
-            rightBack.setPower(-DRIVE_POWER);
-            telemetry.addData("Mode", "Driving Forward");
+        // =============================== THE FIX ===============================
+        // This is the standard Mecanum drive logic that uses joysticks.
 
-        } else if (gamepad1.a) {
-            // Drive Reverse
-            leftFront.setPower(-DRIVE_POWER);
-            rightFront.setPower(-DRIVE_POWER);
-            leftBack.setPower(-DRIVE_POWER);
-            rightBack.setPower(DRIVE_POWER);
-            telemetry.addData("Mode", "Driving Reverse");
+        // The `-` sign on left_stick_y is because the joystick's Y-axis is inverted
+        // (pushing forward gives a negative value).
+        double forward = -gamepad1.left_stick_y;  // Controls forward and backward movement
+        double strafe  =  gamepad1.left_stick_x;  // Controls left and right strafing
+        double rotate  =  gamepad1.right_stick_x;  // Controls robot rotation
 
-        } else if (gamepad1.x) {
-            // Strafe Left
-            leftFront.setPower(-STRAFE_POWER);
-            rightFront.setPower(STRAFE_POWER);
-            leftBack.setPower(STRAFE_POWER);
-            rightBack.setPower(STRAFE_POWER);
-            telemetry.addData("Mode", "Strafing Left");
+        // --- Mecanum Drive Formulas ---
+        // These formulas combine the three inputs to calculate the power for each wheel.
+        double leftFrontPower  = forward + strafe + rotate;
+        double rightFrontPower = forward - strafe - rotate;
+        double leftBackPower   = forward - strafe + rotate;
+        double rightBackPower  = forward + strafe - rotate;
 
-        } else if (gamepad1.b) {
-            // Strafe Right
-            leftFront.setPower(STRAFE_POWER);
-            rightFront.setPower(-STRAFE_POWER);
-            leftBack.setPower(-STRAFE_POWER);
-            rightBack.setPower(-STRAFE_POWER);
-            telemetry.addData("Mode", "Strafing Right");
+        // --- Normalization ---
+        // This is a critical step. It finds the largest motor power (absolute value)
+        // or 1, and divides all motor powers by it. This ensures that no motor power
+        // ever goes above 1.0 while maintaining the correct drive proportions.
+        double denominator = Math.max(Math.abs(forward) + Math.abs(strafe) + Math.abs(rotate), 1);
+        leftFront.setPower(leftFrontPower / denominator);
+        rightFront.setPower(rightFrontPower / denominator);
+        leftBack.setPower(leftBackPower / denominator);
+        rightBack.setPower(rightBackPower / denominator);
 
-        } else {
-            // If no drive buttons are pressed, stop all motors.
-            leftFront.setPower(0);
-            rightFront.setPower(0);
-            leftBack.setPower(0);
-            rightBack.setPower(0);
-            telemetry.addData("Mode", "Stopped");
-        }
+        // =======================================================================
 
+        // Telemetry to show what the robot is doing
+        telemetry.addData("Forward", "%.2f", forward);
+        telemetry.addData("Strafe", "%.2f", strafe);
+        telemetry.addData("Rotate", "%.2f", rotate);
+        telemetry.addLine("---");
+        telemetry.addData("Front L/R", "%.2f, %.2f", leftFront.getPower(), rightFront.getPower());
+        telemetry.addData("Back  L/R", "%.2f, %.2f", leftBack.getPower(), rightBack.getPower());
         telemetry.update();
     }
 
@@ -97,11 +84,20 @@ public class DriverNew extends OpMode {
         leftBack = hwMap.get(DcMotor.class, "left_back_drive");
         rightBack = hwMap.get(DcMotor.class, "right_back_drive");
 
-        // Set motor directions. For a standard Mecanum or Tank drive, one side needs to be reversed.
-        // TUNE THIS based on your robot's behavior.
+        /*
+         =============================== THE FIX ===============================
+         * For a standard mecanum drive, all the motors on one side of the robot
+         * need to be reversed. The other side should be set to forward.
+         *
+         * Let's reverse the entire left side.
+         =======================================================================
+         */
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // Set the right side to forward (this is the default, but it's good to be explicit)
+        rightFront.setDirection(DcMotorSimple.Direction.FORWARD);
         rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
     }
+
 }

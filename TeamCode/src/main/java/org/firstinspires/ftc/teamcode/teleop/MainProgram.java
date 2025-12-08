@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 /**
  * This is the main TeleOp program that combines the Drivetrain, Intake, and Shooter systems.
  * Gamepad 1 controls the robot's movement (Mecanum drive).
- * Gamepad 2 controls the Intake and Shooter mechanisms with a stateful toggle system.
+ * Gamepad 2 controls the Intake and Shooter mechanisms with an advanced stateful toggle system.
  */
 @TeleOp(name = "Main Program (Drive + Mechanisms)", group = "Main")
 public class MainProgram extends OpMode {
@@ -28,11 +28,18 @@ public class MainProgram extends OpMode {
     // --- MECHANISM STATE MACHINE ---
     private enum SystemState {
         STOPPED,
+        REVERSED,
         INTAKE_ONLY,
         SHOOTER_ONLY,
         INTAKE_AND_SHOOTER
     }
     private SystemState mechanismState = SystemState.STOPPED;
+
+    // --- Button Edge Detection (for smart toggling) ---
+    private boolean a2_was_pressed = false;
+    private boolean b2_was_pressed = false;
+    private boolean y2_was_pressed = false;
+    private boolean x2_was_pressed = false;
 
     // --- MECHANISM CONSTANTS ---
     private static final double INTAKE_ROLLER_POWER = 1.0;
@@ -74,13 +81,12 @@ public class MainProgram extends OpMode {
         // --- Telemetry ---
         telemetry.addLine("Main Program Initialized");
         telemetry.addLine("Gamepad 1: Drivetrain");
-        telemetry.addLine("Gamepad 2: Mechanisms (A, B, Y, X)");
+        telemetry.addLine("Gamepad 2: Mechanisms (Press same button to stop)");
         telemetry.update();
     }
 
     /**
      * Code to run REPEATEDLY after the driver hits START but before they hit STOP.
-     * This loop runs both the drive and mechanism control methods in parallel.
      */
     @Override
     public void loop() {
@@ -118,19 +124,37 @@ public class MainProgram extends OpMode {
     }
 
     /**
-     * This method contains the state machine logic for the intake and shooter.
+     * This method contains the advanced state machine logic for the intake and shooter.
      */
     private void handleMechanisms() {
-        // This section updates the desired state based on gamepad 2 button presses.
-        if (gamepad2.x) {
-            mechanismState = SystemState.STOPPED;
-        } else if (gamepad2.y) {
-            mechanismState = SystemState.INTAKE_AND_SHOOTER;
-        } else if (gamepad2.a) {
-            mechanismState = SystemState.INTAKE_ONLY;
-        } else if (gamepad2.b) {
-            mechanismState = SystemState.SHOOTER_ONLY;
+        // This section updates the desired state based on single button presses ("edges").
+
+        // Check for 'A' button press
+        if (gamepad2.a && !a2_was_pressed) {
+            mechanismState = (mechanismState == SystemState.INTAKE_ONLY) ? SystemState.STOPPED : SystemState.INTAKE_ONLY;
         }
+
+        // Check for 'B' button press
+        if (gamepad2.b && !b2_was_pressed) {
+            mechanismState = (mechanismState == SystemState.SHOOTER_ONLY) ? SystemState.STOPPED : SystemState.SHOOTER_ONLY;
+        }
+
+        // Check for 'Y' button press
+        if (gamepad2.y && !y2_was_pressed) {
+            mechanismState = (mechanismState == SystemState.INTAKE_AND_SHOOTER) ? SystemState.STOPPED : SystemState.INTAKE_AND_SHOOTER;
+        }
+
+        // Check for 'X' button press (Outtake/Reverse)
+        if (gamepad2.x && !x2_was_pressed) {
+            mechanismState = (mechanismState == SystemState.REVERSED) ? SystemState.STOPPED : SystemState.REVERSED;
+        }
+
+        // Update the 'was_pressed' state for the next loop cycle
+        a2_was_pressed = gamepad2.a;
+        b2_was_pressed = gamepad2.b;
+        y2_was_pressed = gamepad2.y;
+        x2_was_pressed = gamepad2.x;
+
 
         // This switch statement continuously executes the action based on the current state.
         switch (mechanismState) {
@@ -145,6 +169,9 @@ public class MainProgram extends OpMode {
             case INTAKE_AND_SHOOTER:
                 runIntake();
                 runShooter();
+                break;
+            case REVERSED:
+                runOuttake();
                 break;
             case STOPPED:
             default:
@@ -175,6 +202,13 @@ public class MainProgram extends OpMode {
     public void runShooter() {
         conveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
         intakeGate.setPower(GATE_SERVO_POWER);
+    }
+
+    public void runOuttake() {
+        // For outtake, all components run in reverse
+        intakeRoller.setPower(-INTAKE_ROLLER_POWER);
+        conveyorBelt.setPower(-SHOOTER_CONVEYOR_POWER);
+        intakeGate.setPower(-GATE_SERVO_POWER);
     }
 
     public void stopIntake() {
