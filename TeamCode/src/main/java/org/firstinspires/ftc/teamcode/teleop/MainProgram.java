@@ -31,7 +31,9 @@ public class MainProgram extends OpMode {
         REVERSED,
         INTAKE_ONLY,
         SHOOTER_ONLY,
-        INTAKE_AND_SHOOTER
+
+        SERVO
+        //INTAKE_AND_SHOOTER
     }
     private SystemState mechanismState = SystemState.STOPPED;
 
@@ -141,7 +143,7 @@ public class MainProgram extends OpMode {
 
         // Check for 'Y' button press
         if (gamepad2.y && !y2_was_pressed) {
-            mechanismState = (mechanismState == SystemState.INTAKE_AND_SHOOTER) ? SystemState.STOPPED : SystemState.INTAKE_AND_SHOOTER;
+            mechanismState = (mechanismState == SystemState.SERVO) ? SystemState.STOPPED : SystemState.SERVO;
         }
 
         // Check for 'X' button press (Outtake/Reverse)
@@ -160,15 +162,20 @@ public class MainProgram extends OpMode {
         switch (mechanismState) {
             case INTAKE_ONLY:
                 runIntake();
+                stopServo();
                 stopShooter();
                 break;
             case SHOOTER_ONLY:
                 runShooter();
+                stopServo();
                 stopIntake();
                 break;
-            case INTAKE_AND_SHOOTER:
-                runIntake();
-                runShooter();
+            case SERVO:
+                  runServo();
+                  stopShooter();
+                  stopIntake();
+//                runIntake();
+//                runShooter();
                 break;
             case REVERSED:
                 runOuttake();
@@ -199,6 +206,14 @@ public class MainProgram extends OpMode {
         intakeRoller.setPower(INTAKE_ROLLER_POWER);
     }
 
+    public void runServo() {
+        intakeGate.setPower(GATE_SERVO_POWER);
+    }
+
+    public void stopServo() {
+        intakeGate.setPower(STOP_POWER);
+    }
+
     public void runShooter() {
         conveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
         intakeGate.setPower(GATE_SERVO_POWER);
@@ -223,5 +238,6 @@ public class MainProgram extends OpMode {
     public void stopAllMechanisms() {
         stopIntake();
         stopShooter();
+        stopServo();
     }
 }
