@@ -75,8 +75,8 @@ public class MainProgram extends OpMode {
         // Set Intake/Shooter motor directions (TUNE THIS FOR YOUR ROBOT)
         intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE);
         conveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE);
-        intakeGate.setDirection(DcMotorSimple.Direction.FORWARD);
-
+//        intakeGate.setDirection(CRServo.Direction.FORWARD);
+        intakeGate.setPower(GATE_SERVO_POWER);
         // Ensure all mechanisms are stopped on initialization
         stopAllMechanisms();
 
@@ -146,7 +146,7 @@ public class MainProgram extends OpMode {
             mechanismState = (mechanismState == SystemState.SERVO) ? SystemState.STOPPED : SystemState.SERVO;
         }
 
-        // Check for 'X' button press (Outtake/Reverse)
+//         Check for 'X' button press (Outtake/Reverse)
         if (gamepad2.x && !x2_was_pressed) {
             mechanismState = (mechanismState == SystemState.REVERSED) ? SystemState.STOPPED : SystemState.REVERSED;
         }
@@ -171,14 +171,16 @@ public class MainProgram extends OpMode {
                 stopIntake();
                 break;
             case SERVO:
-                  runServo();
-                  stopShooter();
-                  stopIntake();
-//                runIntake();
-//                runShooter();
+                intakeGate.setPower(1.0); // Force full power
+                intakeRoller.setPower(0);
+                conveyorBelt.setPower(0);
+
                 break;
             case REVERSED:
                 runOuttake();
+                stopShooter();
+                stopIntake();
+                stopServo();
                 break;
             case STOPPED:
             default:
@@ -207,6 +209,7 @@ public class MainProgram extends OpMode {
     }
 
     public void runServo() {
+        // Ensure the power is explicitly set
         intakeGate.setPower(GATE_SERVO_POWER);
     }
 
@@ -222,8 +225,7 @@ public class MainProgram extends OpMode {
     public void runOuttake() {
         // For outtake, all components run in reverse
         intakeRoller.setPower(-INTAKE_ROLLER_POWER);
-        conveyorBelt.setPower(-SHOOTER_CONVEYOR_POWER);
-        intakeGate.setPower(-GATE_SERVO_POWER);
+        intakeGate.setPower(-1.0);
     }
 
     public void stopIntake() {
