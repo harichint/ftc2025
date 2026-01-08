@@ -18,8 +18,12 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
     private HuskyLens huskyLens;
     private NormalizedColorSensor colorSensor;
-    private CRServo intakeGate;
-    private DcMotor conveyorBelt;
+    // Channel 1
+    private CRServo rightIntakeGate;
+    private DcMotor rightConveyorBelt;
+    //Channel 2
+    private CRServo leftIntakeGate;
+    private DcMotor leftConveyorBelt;
 
     // --- ROBOT CONSTANTS (Tune These!) ---
     static final double COUNTS_PER_MOTOR_REV = 537.7;    // For goBILDA 5203-series motor
@@ -95,8 +99,10 @@ public class FarHardCodedAutonomous extends LinearOpMode {
                 turnRobot(LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
             }
 
-            // Step 4: shooting.
-            runShooter();
+            // Step 4: shooting based on ball sequence
+            runShootingSequence(detectedSequence);
+
+//            runShooter();
             telemetry.addLine("Step 4: Shoot 3 balls...");
             telemetry.update();
             sleep(1500); // Run shooter for 1.5 seconds
@@ -121,12 +127,72 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         sleep(3000); // End of OpMode
     }
 
+    public void runShootingSequence(BallColor[] detectedSequence ) {
+        // Step 4: Selective shooting based on sequence
+        telemetry.addLine("Step 4: Executing shooting sequence...");
+        telemetry.update();
+
+        for (BallColor color : detectedSequence) {
+            if (color == BallColor.GREEN) {
+                // Green is held in the Left Intake
+                telemetry.addData("Shooting", "GREEN (Left)");
+                telemetry.update();
+                runLeftShooter();
+                sleep(800); // Time to clear one ball
+                stopLeftShooter();
+            } else if (color == BallColor.PURPLE) {
+                // Purple is held in the Right Intake
+                telemetry.addData("Shooting", "PURPLE (Right)");
+                telemetry.update();
+                runRightShooter();
+                sleep(800); // Time to clear one ball
+                stopRightShooter();
+            }
+
+            // Small pause between individual ball launches to allow shooter recovery
+            sleep(300);
+        }
+
+        // Ensure everything is off after the loop finishes
+        stopAllMechanisms();
+    }
+
+    /**
+     * Stops the right shooter components.
+     */
+    public void stopRightShooter() {
+        rightConveyorBelt.setPower(0);
+        rightIntakeGate.setPower(0);
+    }
+
+    /**
+     * Stops the left shooter components.
+     */
+    public void stopLeftShooter() {
+        leftConveyorBelt.setPower(0);
+        leftIntakeGate.setPower(0);
+    }
+
+    /**
+     * Stops all conveyor and gate mechanisms.
+     */
+    public void stopAllMechanisms() {
+        stopRightShooter();
+        stopLeftShooter();
+    }
+
     /**
      * Activates the shooter-specific components (conveyor and gate servo).
      */
-    public void runShooter() {
-        conveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-        intakeGate.setPower(GATE_SERVO_POWER);
+    public void runRightShooter() {
+        rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+        rightIntakeGate.setPower(GATE_SERVO_POWER);
+    }
+
+
+    public void runLeftShooter() {
+        leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+        leftIntakeGate.setPower(GATE_SERVO_POWER);
     }
 
 
@@ -147,12 +213,16 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         leftBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        intakeGate = hardwareMap.get(CRServo.class, "intake_gate");
-        conveyorBelt = hardwareMap.get(DcMotor.class, "conveyor_belt");
+        rightIntakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
+        rightConveyorBelt = hardwareMap.get(DcMotor.class, "right_conveyor_belt");
+        leftIntakeGate = hardwareMap.get(CRServo.class, "left_intake_gate");
+        leftConveyorBelt = hardwareMap.get(DcMotor.class, "left_conveyor_belt");
 
         // --- Set Motor & Servo Directions ---
-        intakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
-        conveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
+        rightIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
+        rightConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
+        leftIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
+        leftConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
 
         // Sensors
         colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");

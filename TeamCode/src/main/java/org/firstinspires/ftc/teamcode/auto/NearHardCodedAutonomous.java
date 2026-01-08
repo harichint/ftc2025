@@ -16,13 +16,6 @@ import java.util.Arrays;
 
 public class NearHardCodedAutonomous extends LinearOpMode {
 
-        // --- HARDWARE ---
-        private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
-        private HuskyLens huskyLens;
-        private NormalizedColorSensor colorSensor;
-        private CRServo intakeGate;
-        private DcMotor conveyorBelt;
-
         // --- ROBOT CONSTANTS (Tune These!) ---
         static final double COUNTS_PER_MOTOR_REV = 537.7;    // For goBILDA 5203-series motor
         static final double WHEEL_DIAMETER_INCHES = 3.78;
@@ -31,17 +24,21 @@ public class NearHardCodedAutonomous extends LinearOpMode {
         static final double OBELISK_SCAN_ANGLE_DEGREES = 45.0;
         private static final double SHOOTER_CONVEYOR_POWER = 1.0;
         private static final double GATE_SERVO_POWER = 1.0;
-
-        // --- ALLIANCE SELECTION ---
-        private enum GoalDirection { LEFT, RIGHT }
-        private GoalDirection selectedAlliance = GoalDirection.RIGHT; // Default to Right side goal
-
-        // --- SEQUENCE LOGIC ---
-        public enum BallColor { GREEN, PURPLE, UNKNOWN }
         private final BallColor[] SEQ_1 = {BallColor.GREEN, BallColor.PURPLE, BallColor.PURPLE};
         private final BallColor[] SEQ_2 = {BallColor.PURPLE, BallColor.GREEN, BallColor.PURPLE};
         private final BallColor[] SEQ_3 = {BallColor.PURPLE, BallColor.PURPLE, BallColor.GREEN};
         private final BallColor[] SEQ_UNKNOWN = {BallColor.UNKNOWN};
+        // --- HARDWARE ---
+        private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
+        private HuskyLens huskyLens;
+        private NormalizedColorSensor colorSensor;
+//        Channle 1
+        private CRServo rightIntakeGate;
+        private DcMotor rightConveyorBelt;
+//      Channel 2
+        private CRServo leftIntakeGate;
+        private DcMotor leftConveyorBelt;
+        private GoalDirection selectedAlliance = GoalDirection.RIGHT; // Default to Right side goal
 
         @Override
         public void runOpMode() {
@@ -105,8 +102,8 @@ public class NearHardCodedAutonomous extends LinearOpMode {
                     turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
                 }
 
-                // Step 4: shooting.
-                runShooter();
+                // Step 4: shooting. // based on sequence shoot
+                runShootingSequence(detectedSequence);
                 telemetry.addLine("Step 4: Shoot 3 balls...");
                 telemetry.update();
                 sleep(1500); // Run shooter for 1.5 seconds
@@ -124,18 +121,72 @@ public class NearHardCodedAutonomous extends LinearOpMode {
             sleep(3000); // End of OpMode
         }
 
-        /**
-         * Activates the shooter-specific components (conveyor and gate servo).
-         */
-        public void runShooter() {
-            conveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-            intakeGate.setPower(GATE_SERVO_POWER);
+        public void runShootingSequence(BallColor[] detectedSequence ) {
+            // Step 4: Selective shooting based on sequence
+            telemetry.addLine("Step 4: Executing shooting sequence...");
+            telemetry.update();
+
+            for (BallColor color : detectedSequence) {
+                if (color == BallColor.GREEN) {
+                    // Green is held in the Left Intake
+                    telemetry.addData("Shooting", "GREEN (Left)");
+                    telemetry.update();
+                    runLeftShooter();
+                    sleep(800); // Time to clear one ball
+                    stopLeftShooter();
+                } else if (color == BallColor.PURPLE) {
+                    // Purple is held in the Right Intake
+                    telemetry.addData("Shooting", "PURPLE (Right)");
+                    telemetry.update();
+                    runRightShooter();
+                    sleep(800); // Time to clear one ball
+                    stopRightShooter();
+                }
+
+                // Small pause between individual ball launches to allow shooter recovery
+                sleep(300);
+            }
+
+            // Ensure everything is off after the loop finishes
+            stopAllMechanisms();
         }
 
+    /**
+     * Stops the right shooter components.
+     */
+    public void stopRightShooter() {
+        rightConveyorBelt.setPower(0);
+        rightIntakeGate.setPower(0);
+    }
 
-        //----------------------------------------------------------------------------------------------
-        // INITIALIZATION & HELPER METHODS
-        //----------------------------------------------------------------------------------------------
+    /**
+     * Stops the left shooter components.
+     */
+    public void stopLeftShooter() {
+        leftConveyorBelt.setPower(0);
+        leftIntakeGate.setPower(0);
+    }
+
+    /**
+     * Stops all conveyor and gate mechanisms.
+     */
+    public void stopAllMechanisms() {
+        stopRightShooter();
+        stopLeftShooter();
+    }
+
+    /**
+         * Activates the shooter-specific components (conveyor and gate servo).
+         */
+        public void runRightShooter() {
+            rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+        }
+
+        public void runLeftShooter() {
+            leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
+        }
 
         /** Initializes all hardware and sets motor directions. */
         private void initializeHardware() {
@@ -150,12 +201,17 @@ public class NearHardCodedAutonomous extends LinearOpMode {
             leftBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
             rightBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
 
-            intakeGate = hardwareMap.get(CRServo.class, "intake_gate");
-            conveyorBelt = hardwareMap.get(DcMotor.class, "conveyor_belt");
+            rightIntakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
+            rightConveyorBelt = hardwareMap.get(DcMotor.class, "right_conveyor_belt");
+
+            leftIntakeGate = hardwareMap.get(CRServo.class, "left_intake_gate");
+            leftConveyorBelt = hardwareMap.get(DcMotor.class, "left_conveyor_belt");
 
             // --- Set Motor & Servo Directions ---
-            intakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
-            conveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
+            rightIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
+            rightConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
+            leftIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
+            leftConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
 
             // Sensors
             colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
@@ -185,6 +241,11 @@ public class NearHardCodedAutonomous extends LinearOpMode {
             telemetry.addLine("ERROR: No sequence found. Default Sequence loaded");
             return SEQ_1;
         }
+
+
+        //----------------------------------------------------------------------------------------------
+        // INITIALIZATION & HELPER METHODS
+        //----------------------------------------------------------------------------------------------
 
         /** Drives the robot a specific distance in inches using encoders. */
         private void driveDistance(double distanceInches, double power) {
@@ -242,16 +303,22 @@ public class NearHardCodedAutonomous extends LinearOpMode {
             leftBackDrive.setPower(power);
             rightBackDrive.setPower(power);
         }
+
         private void setDriveRunMode(DcMotor.RunMode mode) {
             leftFrontDrive.setMode(mode);
             rightFrontDrive.setMode(mode);
             leftBackDrive.setMode(mode);
             rightBackDrive.setMode(mode);
         }
+
         private void setTargetPosition(int lf, int rf, int lb, int rb) {
             leftFrontDrive.setTargetPosition(lf);
             rightFrontDrive.setTargetPosition(rf);
             leftBackDrive.setTargetPosition(lb);
             rightBackDrive.setTargetPosition(rb);
         }
+        // --- ALLIANCE SELECTION ---
+        private enum GoalDirection { LEFT, RIGHT }
+        // --- SEQUENCE LOGIC ---
+        public enum BallColor { GREEN, PURPLE, UNKNOWN }
     }
