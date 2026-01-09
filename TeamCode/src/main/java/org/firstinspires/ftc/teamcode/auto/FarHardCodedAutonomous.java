@@ -16,11 +16,12 @@ public class FarHardCodedAutonomous extends LinearOpMode {
 
     // --- HARDWARE ---
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
-    private HuskyLens huskyLens;
+//    private HuskyLens huskyLens;
     private NormalizedColorSensor colorSensor;
+     private DcMotor intakeRoller;
     // Channel 1
-    private CRServo rightIntakeGate;
-    private DcMotor rightConveyorBelt;
+    private CRServo rightIntakeGate; //servo
+    private DcMotor rightConveyorBelt;//shooter
     //Channel 2
     private CRServo leftIntakeGate;
     private DcMotor leftConveyorBelt;
@@ -148,7 +149,6 @@ public class FarHardCodedAutonomous extends LinearOpMode {
                 sleep(800); // Time to clear one ball
                 stopRightShooter();
             }
-
             // Small pause between individual ball launches to allow shooter recovery
             sleep(300);
         }
@@ -179,6 +179,8 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     public void stopAllMechanisms() {
         stopRightShooter();
         stopLeftShooter();
+        sleep(5000);
+        intakeRoller.setPower(0);
     }
 
     /**
@@ -186,13 +188,19 @@ public class FarHardCodedAutonomous extends LinearOpMode {
      */
     public void runRightShooter() {
         rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+        sleep(800);
         rightIntakeGate.setPower(GATE_SERVO_POWER);
+        sleep(3000);
+        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
     }
 
 
     public void runLeftShooter() {
         leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+        sleep(50);
         leftIntakeGate.setPower(GATE_SERVO_POWER);
+//        sleep(5000);
+//        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
     }
 
 
@@ -213,40 +221,43 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         leftBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
 
+        intakeRoller = hardwareMap.get(DcMotor.class, "intake_roller");
         rightIntakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
         rightConveyorBelt = hardwareMap.get(DcMotor.class, "right_conveyor_belt");
         leftIntakeGate = hardwareMap.get(CRServo.class, "left_intake_gate");
         leftConveyorBelt = hardwareMap.get(DcMotor.class, "left_conveyor_belt");
 
         // --- Set Motor & Servo Directions ---
-        rightIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
+        intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightIntakeGate.setDirection(DcMotorSimple.Direction.REVERSE);   // Spins to help feed conveyor
         rightConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
         leftIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
-        leftConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
+        leftConveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE); // Spins to push balls up/out
 
         // Sensors
         colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
         colorSensor.setGain(10f);
 
-        huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
-        if (!huskyLens.knock()) {
-            telemetry.addData("FATAL", "HuskyLens not responding!");
-        }
-        huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
+//        huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
+//        if (!huskyLens.knock()) {
+//            telemetry.addData("FATAL", "HuskyLens not responding!");
+//        }
+//        huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
     }
 
     /** Performs a stationary scan for a sequence tag for a given duration. */
     private BallColor[] readSequenceFromObelisk(double scanSeconds) {
         ElapsedTime scanTimer = new ElapsedTime();
         while(opModeIsActive() && scanTimer.seconds() < scanSeconds) {
-            HuskyLens.Block[] blocks = huskyLens.blocks();
-            if (blocks.length > 0) {
-                for (HuskyLens.Block tag : blocks) {
-                    if (tag.id == 1) return SEQ_1;
-                    if (tag.id == 2) return SEQ_2;
-                    if (tag.id == 3) return SEQ_3;
-                }
-            }
+//            HuskyLens.Block[] blocks = huskyLens.blocks();
+//            if (blocks.length > 0) {
+//                for (HuskyLens.Block tag : blocks) {
+//                    if (tag.id == 1) return SEQ_1;
+//                    if (tag.id == 2) return SEQ_2;
+//                    if (tag.id == 3) return SEQ_3;
+//                }
+//            }
+
             sleep(50);
         }
         telemetry.addLine("ERROR: No sequence tag found. Default sequence loaded.");
