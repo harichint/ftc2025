@@ -90,8 +90,8 @@ public class MainProgram extends OpMode {
 //        leftintakeGate.setDirection(CRServo.Direction.FORWARD);
         leftintakeGate.setPower(GATE_SERVO_POWER);
 
-        rightconveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE);
-//        rightintakeGate.setDirection(CRServo.Direction.FORWARD);
+        rightconveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightintakeGate.setDirection(CRServo.Direction.REVERSE);
         rightintakeGate.setPower(GATE_SERVO_POWER);
 
         // Ensure all mechanisms are stopped on initialization
