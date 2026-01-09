@@ -130,7 +130,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
 
     public void runShootingSequence(BallColor[] detectedSequence ) {
         // Step 4: Selective shooting based on sequence
-        telemetry.addLine("Step 4: Executing shooting sequence...");
+        telemetry.addLine("Step 4: Executing shooting sequence..." + Arrays.toString(detectedSequence));
         telemetry.update();
 
         for (BallColor color : detectedSequence) {
@@ -138,14 +138,14 @@ public class FarHardCodedAutonomous extends LinearOpMode {
                 // Green is held in the Left Intake
                 telemetry.addData("Shooting", "GREEN (Left)");
                 telemetry.update();
-                runLeftShooter();
+                runLeftShooter(detectedSequence);
                 sleep(800); // Time to clear one ball
                 stopLeftShooter();
             } else if (color == BallColor.PURPLE) {
                 // Purple is held in the Right Intake
                 telemetry.addData("Shooting", "PURPLE (Right)");
                 telemetry.update();
-                runRightShooter();
+                runRightShooter(detectedSequence);
                 sleep(800); // Time to clear one ball
                 stopRightShooter();
             }
@@ -186,22 +186,38 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     /**
      * Activates the shooter-specific components (conveyor and gate servo).
      */
-    public void runRightShooter() {
-        rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-        sleep(800);
-        rightIntakeGate.setPower(GATE_SERVO_POWER);
-        sleep(3000);
-        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
+    public void runRightShooter(BallColor[] seq) {
+
+        if (Arrays.equals(seq, SEQ_1) || Arrays.equals(seq, SEQ_3)) {
+            rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(800);
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+            sleep(3000);
+            intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
+        } else if (Arrays.equals(seq, SEQ_2)) {
+            rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(800);
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+        }
     }
 
 
-    public void runLeftShooter() {
-        leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-        sleep(50);
-        leftIntakeGate.setPower(GATE_SERVO_POWER);
+    public void runLeftShooter(BallColor[]seq) {
+        if (Arrays.equals(seq, SEQ_1) || Arrays.equals(seq, SEQ_3)) {
+            leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(50);
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
 //        sleep(5000);
 //        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
-    }
+        } else if (Arrays.equals(seq, SEQ_2)) {
+            leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(50);
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
+             sleep(2000);
+             intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
+        }
+
+        }
 
 
     //----------------------------------------------------------------------------------------------
@@ -261,7 +277,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
             sleep(50);
         }
         telemetry.addLine("ERROR: No sequence tag found. Default sequence loaded.");
-        return SEQ_1;
+        return SEQ_3;
     }
 
     /** Drives the robot a specific distance in inches using encoders. */
