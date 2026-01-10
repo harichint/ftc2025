@@ -55,10 +55,10 @@ public class NearHardCodedAutonomous extends LinearOpMode {
                 telemetry.update();
 
                 if (gamepad1.b) {
-                    selectedAlliance = GoalDirection.LEFT;
+                    selectedAlliance = GoalDirection.RIGHT;
                 }
                 if (gamepad1.x) {
-                    selectedAlliance = GoalDirection.RIGHT;
+                    selectedAlliance = GoalDirection.LEFT;
                 }
             }
             // =====================================================================================

@@ -58,8 +58,8 @@ public class FarHardCodedAutonomous extends LinearOpMode {
             telemetry.addLine("--- Alliance Selection ---");
             telemetry.addData("Status", selectionMade ? "READY - Selection Captured" : "WAITING FOR INPUT...");
             telemetry.addData("Current Choice", selectedAlliance);
-            telemetry.addLine("\nPress 'B' for Left side goal (will turn Left)");
-            telemetry.addLine("Press 'X' for Right side goal (will turn Right)");
+            telemetry.addLine("\nPress 'X' for Left side goal (will turn Left)");
+            telemetry.addLine("Press 'B' for Right side goal (will turn Right)");
             telemetry.addLine("\nPress START on Driver Station when selection is correct");
             telemetry.update();
 
@@ -102,9 +102,9 @@ public class FarHardCodedAutonomous extends LinearOpMode {
                 telemetry.addLine("Step 3: Turning towards goal...");
                 telemetry.update();
                 if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
+                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
                 } else { // Alliance is BLUE
-                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
+                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
                 }
 
                 // Step 4: shooting based on ball sequence
