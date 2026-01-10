@@ -20,8 +20,7 @@ public class NearHardCodedAutonomous extends LinearOpMode {
         static final double COUNTS_PER_MOTOR_REV = 537.7;    // For goBILDA 5203-series motor
         static final double WHEEL_DIAMETER_INCHES = 3.78;
         static final double ROBOT_TRACK_WIDTH_INCHES = 14.0;   // Distance between left and right wheels
-        static final double LAUNCH_ANGLE_DEGREES = 40.0;
-        static final double OBELISK_SCAN_ANGLE_DEGREES = 45.0;
+        static final double OBELISK_SCAN_ANGLE_DEGREES = 60.0;
         private static final double SHOOTER_CONVEYOR_POWER = 1.0;
         private static final double GATE_SERVO_POWER = 1.0;
         private final BallColor[] SEQ_1 = {BallColor.GREEN, BallColor.PURPLE, BallColor.PURPLE};
@@ -30,9 +29,11 @@ public class NearHardCodedAutonomous extends LinearOpMode {
         private final BallColor[] SEQ_UNKNOWN = {BallColor.UNKNOWN};
         // --- HARDWARE ---
         private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
-        private HuskyLens huskyLens;
+//        private HuskyLens huskyLens;
         private NormalizedColorSensor colorSensor;
-//        Channle 1
+        private DcMotor intakeRoller;
+
+    //        Channel 1
         private CRServo rightIntakeGate;
         private DcMotor rightConveyorBelt;
 //      Channel 2
@@ -54,10 +55,10 @@ public class NearHardCodedAutonomous extends LinearOpMode {
                 telemetry.update();
 
                 if (gamepad1.b) {
-                    selectedAlliance = GoalDirection.RIGHT;
+                    selectedAlliance = GoalDirection.LEFT;
                 }
                 if (gamepad1.x) {
-                    selectedAlliance = GoalDirection.LEFT;
+                    selectedAlliance = GoalDirection.RIGHT;
                 }
             }
             // =====================================================================================
@@ -72,14 +73,14 @@ public class NearHardCodedAutonomous extends LinearOpMode {
             // Step 1: Drive diagonally - 68 inches backward.
             telemetry.addLine("Step 1: Driving 34 inches backward.");
             telemetry.update();
-            driveMecanum(-68, 35, 0.7); // Drive 70 forward, 35 right, at 70% power
+            driveMecanum(-58, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
             // Step 2: Turn to read sequnce based on selectedAlliance
             telemetry.addLine("Step 2: Turning to read sequence.");
             telemetry.update();
             if (selectedAlliance == GoalDirection.RIGHT) {
-                turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.5); // Turn Left for Right side Alliance
+                turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
             } else { // Alliance is BLUE
-                turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.5);  // Turn Right for LEFT side Alliance
+                turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn Right for LEFT side Alliance
             }
             // Step 3: Now that we have arrived, scan for the sequence tag obelisk.
             telemetry.addLine("Step 3: Arrived, now scanning obelisk...");
@@ -88,7 +89,7 @@ public class NearHardCodedAutonomous extends LinearOpMode {
 
             telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
             telemetry.update();
-            sleep(1000);
+            sleep(500);
 
             // --- Conditional Logic: Only proceed if a sequence was found ---
             if (detectedSequence[0] != BallColor.UNKNOWN) {
@@ -97,20 +98,28 @@ public class NearHardCodedAutonomous extends LinearOpMode {
                 telemetry.addLine("Step 3: Turning towards goal...");
                 telemetry.update();
                 if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
+                    turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn RIGHT for Right side Alliance
                 } else { // Alliance example is BLUE
-                    turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
+                    turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn LEFT for LEFT side Alliance
                 }
 
                 // Step 4: shooting. // based on sequence shoot
                 runShootingSequence(detectedSequence);
                 telemetry.addLine("Step 4: Shoot 3 balls...");
                 telemetry.update();
-                sleep(1500); // Run shooter for 1.5 seconds
+                sleep(500); // Run shooter for 1.5 seconds
 
-                // Step 5: Drive backward to come out of launch line.
+                // Step 5: turn straight and drive backward to come out of launch line.
                 telemetry.addLine("Step 6: Driving backward...");
                 telemetry.update();
+                telemetry.addLine("Step 6a: Turning straight to go back.");
+                telemetry.update();
+                if (selectedAlliance == GoalDirection.RIGHT) {
+                    turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
+                } else { // Alliance is BLUE
+                    turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn Right for LEFT side Alliance
+                }
+
                 driveDistance(-30, 0.4);  // Move backward
             } else {
                 // If the obelisk scan failed, stop here.
@@ -118,38 +127,38 @@ public class NearHardCodedAutonomous extends LinearOpMode {
                 telemetry.update();
             }
 
-            sleep(3000); // End of OpMode
+            sleep(500); // End of OpMode
         }
 
-        public void runShootingSequence(BallColor[] detectedSequence ) {
-            // Step 4: Selective shooting based on sequence
-            telemetry.addLine("Step 4: Executing shooting sequence...");
-            telemetry.update();
 
-            for (BallColor color : detectedSequence) {
-                if (color == BallColor.GREEN) {
-                    // Green is held in the Left Intake
-                    telemetry.addData("Shooting", "GREEN (Left)");
-                    telemetry.update();
-                    runLeftShooter();
-                    sleep(800); // Time to clear one ball
-                    stopLeftShooter();
-                } else if (color == BallColor.PURPLE) {
-                    // Purple is held in the Right Intake
-                    telemetry.addData("Shooting", "PURPLE (Right)");
-                    telemetry.update();
-                    runRightShooter();
-                    sleep(800); // Time to clear one ball
-                    stopRightShooter();
-                }
+    public void runShootingSequence(BallColor[] detectedSequence ) {
+        // Step 4: Selective shooting based on sequence
+        telemetry.addLine("Step 4: Executing shooting sequence..." + Arrays.toString(detectedSequence));
+        telemetry.update();
 
-                // Small pause between individual ball launches to allow shooter recovery
-                sleep(300);
+        for (BallColor color : detectedSequence) {
+            if (color == BallColor.GREEN) {
+                // Green is held in the Left Intake
+                telemetry.addData("Shooting", "GREEN (Left)");
+                telemetry.update();
+                runLeftShooter(detectedSequence);
+                sleep(800); // Time to clear one ball
+                stopLeftShooter();
+            } else if (color == BallColor.PURPLE) {
+                // Purple is held in the Right Intake
+                telemetry.addData("Shooting", "PURPLE (Right)");
+                telemetry.update();
+                runRightShooter(detectedSequence);
+                sleep(800); // Time to clear one ball
+                stopRightShooter();
             }
-
-            // Ensure everything is off after the loop finishes
-            stopAllMechanisms();
+            // Small pause between individual ball launches to allow shooter recovery
+            sleep(50);
         }
+
+        // Ensure everything is off after the loop finishes
+        stopAllMechanisms();
+    }
 
     /**
      * Stops the right shooter components.
@@ -174,19 +183,42 @@ public class NearHardCodedAutonomous extends LinearOpMode {
         stopRightShooter();
         stopLeftShooter();
     }
-
     /**
-         * Activates the shooter-specific components (conveyor and gate servo).
-         */
-        public void runRightShooter() {
+     * Activates the shooter-specific components (conveyor and gate servo).
+     */
+    public void runRightShooter(BallColor[] seq) {
+
+        if (Arrays.equals(seq, SEQ_1) || Arrays.equals(seq, SEQ_3)) {
             rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(800);
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+            sleep(1000);
+            intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
+        } else if (Arrays.equals(seq, SEQ_2)) {
+            rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(800);
             rightIntakeGate.setPower(GATE_SERVO_POWER);
         }
+    }
 
-        public void runLeftShooter() {
+
+    public void runLeftShooter(BallColor[]seq) { //Green
+        if (Arrays.equals(seq, SEQ_1) || Arrays.equals(seq, SEQ_3)) {
             leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(200);
             leftIntakeGate.setPower(GATE_SERVO_POWER);
+//        sleep(5000);
+//        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
+        } else if (Arrays.equals(seq, SEQ_2)) {
+            leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+            sleep(150);
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
+            sleep(1000);
+            intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
         }
+
+    }
+
 
         /** Initializes all hardware and sets motor directions. */
         private void initializeHardware() {
@@ -196,11 +228,12 @@ public class NearHardCodedAutonomous extends LinearOpMode {
             leftBackDrive = hardwareMap.get(DcMotor.class, "left_back_drive");
             rightBackDrive = hardwareMap.get(DcMotor.class, "right_back_drive");
 
-            leftFrontDrive.setDirection(DcMotorSimple.Direction.FORWARD);
+            leftFrontDrive.setDirection(DcMotorSimple.Direction.REVERSE);
             rightFrontDrive.setDirection(DcMotorSimple.Direction.FORWARD);
             leftBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
-            rightBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+            rightBackDrive.setDirection(DcMotorSimple.Direction.FORWARD);
 
+            intakeRoller = hardwareMap.get(DcMotor.class, "intake_roller");
             rightIntakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
             rightConveyorBelt = hardwareMap.get(DcMotor.class, "right_conveyor_belt");
 
@@ -208,35 +241,36 @@ public class NearHardCodedAutonomous extends LinearOpMode {
             leftConveyorBelt = hardwareMap.get(DcMotor.class, "left_conveyor_belt");
 
             // --- Set Motor & Servo Directions ---
-            rightIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
+            intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE);
+            rightIntakeGate.setDirection(DcMotorSimple.Direction.REVERSE);   // Spins to help feed conveyor
             rightConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
             leftIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
-            leftConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
+            leftConveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE); // Spins to push balls up/out
 
             // Sensors
             colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
             colorSensor.setGain(10f);
 
-            huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
-            if (!huskyLens.knock()) {
-                telemetry.addData("FATAL", "HuskyLens not responding!");
-            }
-            huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
+//            huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
+//            if (!huskyLens.knock()) {
+//                telemetry.addData("FATAL", "HuskyLens not responding!");
+//            }
+//            huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
         }
 
         /** Performs a stationary scan for a sequence tag for a given duration. */
         private BallColor[] readSequenceFromObelisk(double scanSeconds) {
             ElapsedTime scanTimer = new ElapsedTime();
             while(opModeIsActive() && scanTimer.seconds() < scanSeconds) {
-                HuskyLens.Block[] blocks = huskyLens.blocks();
-                if (blocks.length > 0) {
-                    for (HuskyLens.Block tag : blocks) {
-                        if (tag.id == 1) return SEQ_1;
-                        if (tag.id == 2) return SEQ_2;
-                        if (tag.id == 3) return SEQ_3;
-                    }
-                }
-                sleep(50);
+//                HuskyLens.Block[] blocks = huskyLens.blocks();
+//                if (blocks.length > 0) {
+//                    for (HuskyLens.Block tag : blocks) {
+//                        if (tag.id == 1) return SEQ_1;
+//                        if (tag.id == 2) return SEQ_2;
+//                        if (tag.id == 3) return SEQ_3;
+//                    }
+//                }
+//                sleep(50);
             }
             telemetry.addLine("ERROR: No sequence found. Default Sequence loaded");
             return SEQ_1;

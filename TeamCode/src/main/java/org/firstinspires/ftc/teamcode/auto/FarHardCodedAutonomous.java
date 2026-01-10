@@ -30,7 +30,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     static final double COUNTS_PER_MOTOR_REV = 537.7;    // For goBILDA 5203-series motor
     static final double WHEEL_DIAMETER_INCHES = 3.78;
     static final double ROBOT_TRACK_WIDTH_INCHES = 14.0;   // Distance between left and right wheels
-    static final double LAUNCH_ANGLE_DEGREES = 40.0;
+    static final double LAUNCH_ANGLE_DEGREES = 55.0;
     private static final double SHOOTER_CONVEYOR_POWER = 1.0;
     private static final double GATE_SERVO_POWER = 1.0;
 
@@ -51,81 +51,89 @@ public class FarHardCodedAutonomous extends LinearOpMode {
 
         // =============================== ALLIANCE SELECTION LOOP ===============================
         // This loop runs during the INIT phase, before the driver presses START.
+        boolean selectionMade = false;
+
+        // while loop ensures the robot stays here until the START button is pressed
         while (!isStarted() && !isStopRequested()) {
             telemetry.addLine("--- Alliance Selection ---");
-            telemetry.addData("Selected Alliance", selectedAlliance);
-            telemetry.addLine("\nPress 'B' on Gamepad 1 for Right side goal post");
-            telemetry.addLine("Press 'X' on Gamepad 1 for Left side goal post");
+            telemetry.addData("Status", selectionMade ? "READY - Selection Captured" : "WAITING FOR INPUT...");
+            telemetry.addData("Current Choice", selectedAlliance);
+            telemetry.addLine("\nPress 'B' for Left side goal (will turn Left)");
+            telemetry.addLine("Press 'X' for Right side goal (will turn Right)");
+            telemetry.addLine("\nPress START on Driver Station when selection is correct");
             telemetry.update();
 
             if (gamepad1.b) {
                 selectedAlliance = GoalDirection.RIGHT;
+                selectionMade = true;
             }
             if (gamepad1.x) {
                 selectedAlliance = GoalDirection.LEFT;
+                selectionMade = true;
             }
         }
         // =====================================================================================
 
-        telemetry.addData("Ready to Run for", selectedAlliance + " Alliance");
-        telemetry.update();
-
         waitForStart();
 
-        // --- AUTONOMOUS SEQUENCE ---
-
-        // Step 1: Drive diagonally - 70 inches forward
-        telemetry.addLine("Step 1: Driving 70 inches forward.");
-        telemetry.update();
-        driveMecanum(70, 35, 0.7); // Drive 70 forward, 35 right, at 70% power
-
-        // Step 2: Now that we have arrived, scan for the sequence tag obelisk.
-        telemetry.addLine("Step 2: Arrived, now scanning obelisk...");
-        telemetry.update();
-        BallColor[] detectedSequence = readSequenceFromObelisk(2.0); // Scan for 2 seconds
-
-        telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
-        telemetry.update();
-        sleep(1000);
-
-        // --- Conditional Logic: Only proceed if a sequence was found ---
-        if (detectedSequence[0] != BallColor.UNKNOWN) {
-
-            // Step 3: Turn towards the correct goal based on the selected alliance.
-            telemetry.addLine("Step 3: Turning towards goal...");
+        // Final check before running the sequence
+        if (opModeIsActive() && selectionMade) {
+            telemetry.addData("Executing for", selectedAlliance + " Goal");
             telemetry.update();
-            if (selectedAlliance == GoalDirection.RIGHT) {
-                turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
-            } else { // Alliance is BLUE
-                turnRobot(LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
-            }
 
-            // Step 4: shooting based on ball sequence
-            runShootingSequence(detectedSequence);
+            // Step 1: Drive diagonally - 70 inches forward
+            telemetry.addLine("Step 1: Driving 70 inches forward.");
+            telemetry.update();
+            driveMecanum(70, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
+
+            // Step 2: Now that we have arrived, scan for the sequence tag obelisk.
+            telemetry.addLine("Step 2: Arrived, now scanning obelisk...");
+            telemetry.update();
+            BallColor[] detectedSequence = readSequenceFromObelisk(2.0); // Scan for 2 seconds
+
+            telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
+            telemetry.update();
+            sleep(500);
+
+            // --- Conditional Logic: Only proceed if a sequence was found ---
+            if (detectedSequence[0] != BallColor.UNKNOWN) {
+
+                // Step 3: Turn towards the correct goal based on the selected alliance.
+                telemetry.addLine("Step 3: Turning towards goal...");
+                telemetry.update();
+                if (selectedAlliance == GoalDirection.RIGHT) {
+                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
+                } else { // Alliance is BLUE
+                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
+                }
+
+                // Step 4: shooting based on ball sequence
+                runShootingSequence(detectedSequence);
 
 //            runShooter();
-            telemetry.addLine("Step 4: Shoot 3 balls...");
-            telemetry.update();
-            sleep(1500); // Run shooter for 1.5 seconds
+                telemetry.addLine("Step 4: Shoot 3 balls...");
+                telemetry.update();
+                sleep(1000); // Run shooter for 1.5 seconds
 
-            // Step 5: Reposition after shooting.
-            if (selectedAlliance == GoalDirection.RIGHT) {
-                turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn LEFT to straighten out
-            } else { // Alliance is BLUE
-                turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT to straighten out
+                // Step 5: Reposition after shooting.
+                if (selectedAlliance == GoalDirection.RIGHT) {
+                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn LEFT to straighten out
+                } else { // Alliance is BLUE
+                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT to straighten out
+                }
+
+                // Step 6: Drive backward.
+                telemetry.addLine("Step 6: Driving backward...");
+                telemetry.update();
+                driveDistance(-10, 0.4);  // Move backward
+            } else {
+                // If the obelisk scan failed, stop here.
+                telemetry.addLine("ERROR: No sequence found. Stopping.");
+                telemetry.update();
             }
 
-            // Step 6: Drive backward.
-            telemetry.addLine("Step 6: Driving backward...");
-            telemetry.update();
-            driveDistance(-10, 0.4);  // Move backward
-        } else {
-            // If the obelisk scan failed, stop here.
-            telemetry.addLine("ERROR: No sequence found. Stopping.");
-            telemetry.update();
-        }
-
-        sleep(3000); // End of OpMode
+            sleep(500);
+        }// End of OpMode
     }
 
     public void runShootingSequence(BallColor[] detectedSequence ) {
@@ -150,7 +158,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
                 stopRightShooter();
             }
             // Small pause between individual ball launches to allow shooter recovery
-            sleep(300);
+            sleep(50);
         }
 
         // Ensure everything is off after the loop finishes
@@ -192,7 +200,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
             rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
             sleep(800);
             rightIntakeGate.setPower(GATE_SERVO_POWER);
-            sleep(3000);
+            sleep(1000);
             intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
         } else if (Arrays.equals(seq, SEQ_2)) {
             rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
@@ -202,22 +210,22 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     }
 
 
-    public void runLeftShooter(BallColor[]seq) {
+    public void runLeftShooter(BallColor[]seq) { //Green
         if (Arrays.equals(seq, SEQ_1) || Arrays.equals(seq, SEQ_3)) {
             leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-            sleep(50);
+            sleep(200);
             leftIntakeGate.setPower(GATE_SERVO_POWER);
 //        sleep(5000);
 //        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
         } else if (Arrays.equals(seq, SEQ_2)) {
             leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-            sleep(50);
+            sleep(150);
             leftIntakeGate.setPower(GATE_SERVO_POWER);
-             sleep(2000);
+             sleep(1000);
              intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
         }
 
-        }
+    }
 
 
     //----------------------------------------------------------------------------------------------
@@ -232,10 +240,10 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         leftBackDrive = hardwareMap.get(DcMotor.class, "left_back_drive");
         rightBackDrive = hardwareMap.get(DcMotor.class, "right_back_drive");
 
-        leftFrontDrive.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftFrontDrive.setDirection(DcMotorSimple.Direction.REVERSE);
         rightFrontDrive.setDirection(DcMotorSimple.Direction.FORWARD);
         leftBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBackDrive.setDirection(DcMotorSimple.Direction.FORWARD);
 
         intakeRoller = hardwareMap.get(DcMotor.class, "intake_roller");
         rightIntakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
