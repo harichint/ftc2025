@@ -1,10 +1,13 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
 
 /**
  * This is the main TeleOp program that combines the Drivetrain, Intake, and Shooter systems.
@@ -22,22 +25,26 @@ public class MainProgram extends OpMode {
 
     // --- INTAKE & SHOOTER HARDWARE ---
     private DcMotor intakeRoller;
-    private CRServo leftintakeGate;
-    private DcMotor leftconveyorBelt;
+    private CRServo leftIntakeGate;
+    private DcMotor leftConveyorBelt;
 
-    private CRServo rightintakeGate;
-    private DcMotor rightconveyorBelt;
+    private CRServo rightIntakeGate;
+    private DcMotor rightConveyorBelt;
+    private ElapsedTime mechanismTimer = new ElapsedTime();
+    private boolean lagActive = false; // Tracks if we are currently in a waiting period
 
 
     // --- MECHANISM STATE MACHINE ---
     private enum SystemState {
         STOPPED,
-        REVERSED,
+        LEFT_REVERSED,
+        RIGHT_REVERSED,
         INTAKE_ONLY,
-        LEFT_SHOOTER_ONLY,
-        LEFT_SERVO,
-        RIGHT_SHOOTER_ONLY,
-        RIGHT_SERVO
+        SHOOTING_SEQUENCE
+//        LEFT_SHOOTER_ONLY,
+//        LEFT_SERVO,
+//        RIGHT_SHOOTER_ONLY,
+//        RIGHT_SERVO
 
         //INTAKE_AND_SHOOTER
     }
@@ -79,20 +86,19 @@ public class MainProgram extends OpMode {
 
         // --- Initialize Intake & Shooter ---
         intakeRoller = hardwareMap.get(DcMotor.class, "intake_roller");
-        leftintakeGate = hardwareMap.get(CRServo.class, "left_intake_gate");
-        leftconveyorBelt = hardwareMap.get(DcMotor.class, "left_conveyor_belt");
-        rightintakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
-        rightconveyorBelt = hardwareMap.get(DcMotor.class, "right_conveyor_belt");
+        leftIntakeGate = hardwareMap.get(CRServo.class, "left_intake_gate");
+        leftConveyorBelt = hardwareMap.get(DcMotor.class, "left_conveyor_belt");
+        rightIntakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
+        rightConveyorBelt = hardwareMap.get(DcMotor.class, "right_conveyor_belt");
 
         // Set Intake/Shooter motor directions (TUNE THIS FOR YOUR ROBOT)
         intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftconveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE);
-//        leftintakeGate.setDirection(CRServo.Direction.FORWARD);
-        leftintakeGate.setPower(GATE_SERVO_POWER);
+        leftConveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftIntakeGate.setPower(GATE_SERVO_POWER);
 
-        rightconveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD);
-        rightintakeGate.setDirection(CRServo.Direction.REVERSE);
-        rightintakeGate.setPower(GATE_SERVO_POWER);
+        rightConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightIntakeGate.setDirection(CRServo.Direction.REVERSE);
+        rightIntakeGate.setPower(GATE_SERVO_POWER);
 
         // Ensure all mechanisms are stopped on initialization
         stopAllMechanisms();
@@ -145,87 +151,109 @@ public class MainProgram extends OpMode {
     /**
      * This method contains the advanced state machine logic for the intake and shooter.
      */
+    /**
+     * Corrected handleMechanisms with proper edge detection
+     */
     private void handleMechanisms() {
-        // This section updates the desired state based on single button presses ("edges").
+        // 1. Safety Check: If Gamepad 2 is not detected, stop everything and alert driver
+        if (gamepad2.id == -1) { // -1 usually indicates no gamepad is assigned
+            telemetry.addData("WARNING", "Gamepad 2 NOT DETECTED!");
+            stopAllMechanisms();
+            return;
+        }
 
-        // Check for 'A' button press
+        // --- State Selection Logic (Edge Detection) ---
+
+        // Check for 'A' button (Intake)
         if (gamepad2.a && !a2_was_pressed) {
             mechanismState = (mechanismState == SystemState.INTAKE_ONLY) ? SystemState.STOPPED : SystemState.INTAKE_ONLY;
         }
 
-        // Check for 'B' button press
-        if (gamepad2.b && !b2_was_pressed) {
-            mechanismState = (mechanismState == SystemState.LEFT_SHOOTER_ONLY) ? SystemState.STOPPED : SystemState.LEFT_SHOOTER_ONLY;
-        }
-
-        // Check for 'Y' button press
+        // Check for 'Y' button (Shooting Sequence)
         if (gamepad2.y && !y2_was_pressed) {
-            mechanismState = (mechanismState == SystemState.LEFT_SERVO) ? SystemState.STOPPED : SystemState.LEFT_SERVO;
+            if (mechanismState != SystemState.SHOOTING_SEQUENCE) {
+                mechanismState = SystemState.SHOOTING_SEQUENCE;
+                mechanismTimer.reset();
+            } else {
+                mechanismState = SystemState.STOPPED;
+            }
         }
 
-//         Check for 'X' button press (Outtake/Reverse)
+        // Check for 'X' button (Left Reverse)
         if (gamepad2.x && !x2_was_pressed) {
-            mechanismState = (mechanismState == SystemState.REVERSED) ? SystemState.STOPPED : SystemState.REVERSED;
+            mechanismState = (mechanismState == SystemState.LEFT_REVERSED) ? SystemState.STOPPED : SystemState.LEFT_REVERSED;
         }
 
-        // Check for 'dpad_left' button press
-        if (gamepad2.dpad_left && !dpad_left_was_pressed) {
-            mechanismState = (mechanismState == SystemState.RIGHT_SHOOTER_ONLY) ? SystemState.STOPPED : SystemState.RIGHT_SHOOTER_ONLY;
+        // Check for 'B' button (Right Reverse)
+        if (gamepad2.b && !b2_was_pressed) {
+            mechanismState = (mechanismState == SystemState.RIGHT_REVERSED) ? SystemState.STOPPED : SystemState.RIGHT_REVERSED;
         }
 
-        // Check for 'dpad_up' button press
-        if (gamepad2.dpad_up && !dpad_up_was_pressed) {
-            mechanismState = (mechanismState == SystemState.RIGHT_SERVO) ? SystemState.STOPPED : SystemState.RIGHT_SERVO;
-        }
+        // --- Debugging: Show which button is currently physically held down ---
+        telemetry.addData("G2 Buttons", "A:%b B:%b X:%b Y:%b",
+                gamepad2.a, gamepad2.b, gamepad2.x, gamepad2.y);
 
-
-        // Update the 'was_pressed' state for the next loop cycle
+        // Update edge detection variables for next loop
         a2_was_pressed = gamepad2.a;
-        b2_was_pressed = gamepad2.b;
-        y2_was_pressed = gamepad2.y;
         x2_was_pressed = gamepad2.x;
-        dpad_left_was_pressed = gamepad2.dpad_left;
-        dpad_up_was_pressed = gamepad2.dpad_up;
+        y2_was_pressed = gamepad2.y;
+        b2_was_pressed = gamepad2.b;
 
-
-        // This switch statement continuously executes the action based on the current state.
+        // --- State Execution Logic ---
         switch (mechanismState) {
             case INTAKE_ONLY:
                 runIntake();
-                stopleftServo();
-                stopleftShooter();
                 break;
-            case LEFT_SHOOTER_ONLY:
-                runleftShooter();
-                stopleftServo();
-                stopIntake();
+            case SHOOTING_SEQUENCE:
+                runShootingSequence();
                 break;
-            case LEFT_SERVO:
-                leftintakeGate.setPower(1.0); // Force full power
-                intakeRoller.setPower(0);
-                leftconveyorBelt.setPower(0);
+            case LEFT_REVERSED:
+                leftConveyorBelt.setPower(-0.8);
+                leftIntakeGate.setPower(-1.0);
                 break;
-            case RIGHT_SHOOTER_ONLY:
-                runrightShooter();
-                stoprightServo();
-                stopIntake();
-                break;
-            case RIGHT_SERVO:
-                rightintakeGate.setPower(1.0); // Force full power
-                intakeRoller.setPower(0);
-                rightconveyorBelt.setPower(0);
-                break;
-            case REVERSED:
-                runOuttake();
-                stopleftShooter();
-                stopIntake();
-                stopleftServo();
+            case RIGHT_REVERSED:
+                rightConveyorBelt.setPower(-0.8);
+                rightIntakeGate.setPower(-1.0);
                 break;
             case STOPPED:
             default:
-                stopAllMechanisms();
+                applyStopPowers();
                 break;
         }
+    }
+
+    // Split stopping into two methods to prevent Timer Reset loops
+    public void applyStopPowers() {
+        leftConveyorBelt.setPower(0);
+        rightConveyorBelt.setPower(0);
+        leftIntakeGate.setPower(0);
+        rightIntakeGate.setPower(0);
+        intakeRoller.setPower(0);
+    }
+
+    public void runShootingSequence() {
+        double elapsed = mechanismTimer.milliseconds();
+
+        // --- LEFT SIDE SEQUENCE ---
+        leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+        if (elapsed > 500) {
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
+        } else {
+            leftIntakeGate.setPower(0);
+        }
+
+        // --- RIGHT SIDE SEQUENCE (Starting after or alongside) ---
+        // If you want them to fire one after another, increase the timing for the right side
+        rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
+
+        if (elapsed > 1300) { // Fires 800ms after the left side (500 + 800)
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+        } else {
+            rightIntakeGate.setPower(0);
+        }
+
+        telemetry.addData("Shooting Status", "Elapsed: %.0f ms", elapsed);
     }
 
     /**
@@ -245,55 +273,18 @@ public class MainProgram extends OpMode {
 
     public void runIntake() {
         intakeRoller.setPower(INTAKE_ROLLER_POWER);
+        // Turn on conveyors at lower power to help pull items in
+        leftConveyorBelt.setPower(0.5);
+        rightConveyorBelt.setPower(0.5);
     }
 
-    public void runServo() {
-        // Ensure the power is explicitly set
-        leftintakeGate.setPower(GATE_SERVO_POWER);
-    }
-
-    public void stopleftServo() {
-        leftintakeGate.setPower(STOP_POWER);
-    }
-
-    public void stoprightServo() {
-        rightintakeGate.setPower(STOP_POWER);
-    }
-
-    public void runleftShooter() {
-        leftconveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-        leftintakeGate.setPower(GATE_SERVO_POWER);
-    }
-
-    public void runrightShooter() {
-        rightconveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-        rightintakeGate.setPower(GATE_SERVO_POWER);
-    }
-
-    public void runOuttake() {
-        // For outtake, all components run in reverse
-        intakeRoller.setPower(-INTAKE_ROLLER_POWER);
-        leftintakeGate.setPower(-1.0);
-    }
-
-    public void stopIntake() {
-        intakeRoller.setPower(STOP_POWER);
-    }
-
-    public void stopleftShooter() {
-        leftconveyorBelt.setPower(STOP_POWER);
-        leftintakeGate.setPower(STOP_POWER);
-    }
-    public void stoprightShooter() {
-        rightconveyorBelt.setPower(STOP_POWER);
-        rightintakeGate.setPower(STOP_POWER);
-    }
-
+    /**
+     * Stops all conveyor and gate mechanisms.
+     */
     public void stopAllMechanisms() {
-        stopIntake();
-        stopleftShooter();
-        stopleftServo();
-        stoprightShooter();
-        stoprightServo();
+        applyStopPowers();
+        mechanismTimer.reset();
+        mechanismState = SystemState.STOPPED;
     }
+
 }

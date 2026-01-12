@@ -110,7 +110,6 @@ public class FarHardCodedAutonomous extends LinearOpMode {
                 // Step 4: shooting based on ball sequence
                 runShootingSequence(detectedSequence);
 
-//            runShooter();
                 telemetry.addLine("Step 4: Shoot 3 balls...");
                 telemetry.update();
                 sleep(1000); // Run shooter for 1.5 seconds
@@ -187,7 +186,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     public void stopAllMechanisms() {
         stopRightShooter();
         stopLeftShooter();
-        sleep(5000);
+        sleep(1000);
         intakeRoller.setPower(0);
     }
 
