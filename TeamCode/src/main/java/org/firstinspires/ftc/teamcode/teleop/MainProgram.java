@@ -236,7 +236,8 @@ public class MainProgram extends OpMode {
 
         // --- LEFT SIDE SEQUENCE ---
         leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-        if (elapsed > 500) {
+
+        if (elapsed > 800) {
             leftIntakeGate.setPower(GATE_SERVO_POWER);
         } else {
             leftIntakeGate.setPower(0);
@@ -245,9 +246,9 @@ public class MainProgram extends OpMode {
         // --- RIGHT SIDE SEQUENCE (Starting after or alongside) ---
         // If you want them to fire one after another, increase the timing for the right side
         rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
-        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
 
-        if (elapsed > 1300) { // Fires 800ms after the left side (500 + 800)
+        if (elapsed > 1600) { // Fires 800ms after the left side (500 + 800)
+            intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
             rightIntakeGate.setPower(GATE_SERVO_POWER);
         } else {
             rightIntakeGate.setPower(0);
