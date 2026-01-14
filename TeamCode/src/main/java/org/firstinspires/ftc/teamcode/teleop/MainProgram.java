@@ -40,13 +40,8 @@ public class MainProgram extends OpMode {
         LEFT_REVERSED,
         RIGHT_REVERSED,
         INTAKE_ONLY,
-        SHOOTING_SEQUENCE
-//        LEFT_SHOOTER_ONLY,
-//        LEFT_SERVO,
-//        RIGHT_SHOOTER_ONLY,
-//        RIGHT_SERVO
-
-        //INTAKE_AND_SHOOTER
+        SHOOTING_SEQUENCE,
+        SHOOTER_ONLY // Add this
     }
     private SystemState mechanismState = SystemState.STOPPED;
 
@@ -62,7 +57,9 @@ public class MainProgram extends OpMode {
 
     // --- MECHANISM CONSTANTS ---
     private static final double INTAKE_ROLLER_POWER = 1.0;
-    private static final double SHOOTER_CONVEYOR_POWER = 0.8;
+    private static final double LEFT_SHOOTER_CONVEYOR_POWER = 0.8;
+    private static final double RIGHT_SHOOTER_CONVEYOR_POWER = 1.0;
+
     private static final double GATE_SERVO_POWER = 1.0;
     private static final double STOP_POWER = 0.0;
 
@@ -169,6 +166,12 @@ public class MainProgram extends OpMode {
             mechanismState = (mechanismState == SystemState.INTAKE_ONLY) ? SystemState.STOPPED : SystemState.INTAKE_ONLY;
         }
 
+        // Check for Dpad Up (Shooter Only)
+        if (gamepad2.dpad_up && !dpad_up_was_pressed) {
+            mechanismState = (mechanismState == SystemState.SHOOTER_ONLY) ? SystemState.STOPPED : SystemState.SHOOTER_ONLY;
+        }
+        dpad_up_was_pressed = gamepad2.dpad_up; // Update edge detection
+
         // Check for 'Y' button (Shooting Sequence)
         if (gamepad2.y && !y2_was_pressed) {
             if (mechanismState != SystemState.SHOOTING_SEQUENCE) {
@@ -207,6 +210,9 @@ public class MainProgram extends OpMode {
             case SHOOTING_SEQUENCE:
                 runShootingSequence();
                 break;
+            case SHOOTER_ONLY: // Add this case
+                runShooterOnly();
+                break;
             case LEFT_REVERSED:
                 leftConveyorBelt.setPower(-0.8);
                 leftIntakeGate.setPower(-1.0);
@@ -222,6 +228,11 @@ public class MainProgram extends OpMode {
         }
     }
 
+    public void runShooterOnly() {
+        leftConveyorBelt.setPower(LEFT_SHOOTER_CONVEYOR_POWER);
+        rightConveyorBelt.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
+    }
+
     // Split stopping into two methods to prevent Timer Reset loops
     public void applyStopPowers() {
         leftConveyorBelt.setPower(0);
@@ -235,9 +246,10 @@ public class MainProgram extends OpMode {
         double elapsed = mechanismTimer.milliseconds();
 
         // --- LEFT SIDE SEQUENCE ---
-        leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
+        leftConveyorBelt.setPower(LEFT_SHOOTER_CONVEYOR_POWER);
+        rightConveyorBelt.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
 
-        if (elapsed > 800) {
+        if (elapsed > 1200 && elapsed <= 1200) {
             leftIntakeGate.setPower(GATE_SERVO_POWER);
         } else {
             leftIntakeGate.setPower(0);
@@ -245,13 +257,13 @@ public class MainProgram extends OpMode {
 
         // --- RIGHT SIDE SEQUENCE (Starting after or alongside) ---
         // If you want them to fire one after another, increase the timing for the right side
-        rightConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
 
-        if (elapsed > 1600) { // Fires 800ms after the left side (500 + 800)
-            intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
+        if (elapsed > 1200 ) { // Fires 800ms after the left side (500 + 800)
             rightIntakeGate.setPower(GATE_SERVO_POWER);
-        } else {
-            rightIntakeGate.setPower(0);
+//        }
+//        if (elapsed > 800 ) {//&& elapsed < 2000) { // Fires 800ms after the left side (500 + 800)
+            intakeRoller.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
         }
 
         telemetry.addData("Shooting Status", "Elapsed: %.0f ms", elapsed);
@@ -275,8 +287,8 @@ public class MainProgram extends OpMode {
     public void runIntake() {
         intakeRoller.setPower(INTAKE_ROLLER_POWER);
         // Turn on conveyors at lower power to help pull items in
-        leftConveyorBelt.setPower(0.5);
-        rightConveyorBelt.setPower(0.5);
+//        leftConveyorBelt.setPower(0.5);
+//        rightConveyorBelt.setPower(0.5);
     }
 
     /**
