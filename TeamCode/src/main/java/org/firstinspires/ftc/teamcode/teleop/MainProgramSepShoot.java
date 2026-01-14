@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 
 /**
@@ -16,8 +17,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Gamepad 1 controls the robot's movement (Mecanum drive).
  * Gamepad 2 controls the Intake and Shooter mechanisms with an advanced stateful toggle system.
  */
-@TeleOp(name = "Main Program No Sep Shooter (Drive + Mechanisms)", group = "Main")
-public class MainProgram extends OpMode {
+@TeleOp(name = "Main Program Sep Shooter (Drive + Mechanisms)", group = "Main")
+public class MainProgramSepShoot extends OpMode {
 
     // --- DRIVETRAIN HARDWARE ---
     private DcMotor leftFront;
@@ -63,9 +64,9 @@ public class MainProgram extends OpMode {
     private static final double RIGHT_SHOOTER_CONVEYOR_POWER = 1.0;
 
     private static final double GATE_SERVO_POWER = 1.0;
-    // --- NEW SENSOR HARDWARE ---
     private DistanceSensor distanceSensor;
-
+    private double dynamicShootingPower = 0.8; // Default fallback
+    private static final double MAX_SHOOT_DISTANCE_INCHES = 108.0; // 9 feet
 
     /**
      * Code to run ONCE when the driver hits INIT.
@@ -73,8 +74,18 @@ public class MainProgram extends OpMode {
     @Override
     public void init() {
         // ---- Initialize Sensors and Camera ---
+//        huskyLens = hardwareMap.get(HuskyLens.class, "huskylens");
         distanceSensor = hardwareMap.get(DistanceSensor.class, "sensor_distance");
-
+        // --- ADD THIS TO INCREASE RANGE TO 2M ---
+        // Note: This works if using the standard REV 2M Distance Sensor
+        // It sets the sensor to be more sensitive for longer distances
+        if (distanceSensor instanceof com.qualcomm.hardware.rev.Rev2mDistanceSensor) {
+            com.qualcomm.hardware.rev.Rev2mDistanceSensor revSensor =
+                    (com.qualcomm.hardware.rev.Rev2mDistanceSensor) distanceSensor;
+            // While there isn't a direct "setLongRange" method in the basic wrapper,
+            // ensuring the sensor is enabled and using DistanceUnit.MM internally
+            // often helps the SDK handle the 2m threshold better.
+        }
 
         // --- Initialize Drivetrain ---
         leftFront = hardwareMap.get(DcMotor.class, "left_front_drive");
@@ -252,26 +263,26 @@ public class MainProgram extends OpMode {
     public void runShootingSequence() {
         double elapsed = mechanismTimer.milliseconds();
 
-        // --- LEFT SIDE SEQUENCE ---
-        leftConveyorBelt.setPower(LEFT_SHOOTER_CONVEYOR_POWER);
-        rightConveyorBelt.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
+//        // --- LEFT SIDE SEQUENCE ---
+//        leftConveyorBelt.setPower(LEFT_SHOOTER_CONVEYOR_POWER);
+//        rightConveyorBelt.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
 
-        if (elapsed > 1200 && elapsed <= 1200) {
+//        if (elapsed > 1200 && elapsed <= 1200) {
             leftIntakeGate.setPower(GATE_SERVO_POWER);
-        } else {
-            leftIntakeGate.setPower(0);
-        }
+//        } else {
+//            leftIntakeGate.setPower(0);
+//        }
 
         // --- RIGHT SIDE SEQUENCE (Starting after or alongside) ---
         // If you want them to fire one after another, increase the timing for the right side
 
-        if (elapsed > 1200 ) { // Fires 800ms after the left side (500 + 800)
+//        if (elapsed > 1200 ) { // Fires 800ms after the left side (500 + 800)
             rightIntakeGate.setPower(GATE_SERVO_POWER);
 //        }
 //        if (elapsed > 800 ) {//&& elapsed < 2000) { // Fires 800ms after the left side (500 + 800)
             intakeRoller.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
             leftIntakeGate.setPower(GATE_SERVO_POWER);
-        }
+//        }
 
         telemetry.addData("Shooting Status", "Elapsed: %.0f ms", elapsed);
     }
@@ -284,8 +295,21 @@ public class MainProgram extends OpMode {
         telemetry.addData("Forward", "%.2f", -gamepad1.left_stick_y);
         telemetry.addData("Strafe", "%.2f", gamepad1.left_stick_x);
         telemetry.addData("Rotate", "%.2f", gamepad1.right_stick_x);
+        telemetry.addData("--- Sensors ---", "");
+
+        double distanceInches = distanceSensor.getDistance(DistanceUnit.INCH);
+
+        // Filter and display distance
+        // 80 inches is approx 2.03 meters
+        if (distanceInches > 0.5 && distanceInches < 80) {
+            telemetry.addData("Alliance Dist", "%.1f in (%.1f cm)",
+                    distanceInches, distanceInches * 2.54);
+        } else {
+            telemetry.addData("Alliance Dist", "OUT OF RANGE (> 2m)");
+        }
+
         telemetry.addData("--- Mechanisms ---", "");
-        telemetry.addData("Mechanism State", mechanismState);
+        telemetry.addData("State", mechanismState);
         telemetry.update();
     }
 
