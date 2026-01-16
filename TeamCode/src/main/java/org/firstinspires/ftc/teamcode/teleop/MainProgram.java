@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
 
+import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -9,6 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 
 /**
@@ -43,7 +45,10 @@ public class MainProgram extends OpMode {
         RIGHT_REVERSED,
         INTAKE_ONLY,
         SHOOTING_SEQUENCE,
-        SHOOTER_ONLY // Add this
+        SHOOTER_ONLY,// Add this
+        REVERSE_OR_EMPTY_RIGHT_CHANNEL,
+
+        REVERSE_OR_EMPTY_LEFT_CHANNEL
     }
     private SystemState mechanismState = SystemState.STOPPED;
 
@@ -55,16 +60,20 @@ public class MainProgram extends OpMode {
 
     private boolean dpad_left_was_pressed = false;
     private boolean dpad_up_was_pressed = false;
-    private boolean dpad_down_was_pressed = false;
+    private boolean dpad_right_was_pressed = false;
 
     // --- MECHANISM CONSTANTS ---
     private static final double INTAKE_ROLLER_POWER = 1.0;
-    private static final double LEFT_SHOOTER_CONVEYOR_POWER = 0.8;
+
+    private static final double LEFT_SHOOTER_CONVEYOR_POWER = 0.7    ;
     private static final double RIGHT_SHOOTER_CONVEYOR_POWER = 1.0;
 
     private static final double GATE_SERVO_POWER = 1.0;
     // --- NEW SENSOR HARDWARE ---
     private DistanceSensor distanceSensor;
+    private double dynamicShootingPower = 0.8; // Default fallback
+    private static final double MAX_SHOOT_DISTANCE_INCHES = 108.0; // 9 feet
+
 
 
     /**
@@ -74,7 +83,13 @@ public class MainProgram extends OpMode {
     public void init() {
         // ---- Initialize Sensors and Camera ---
         distanceSensor = hardwareMap.get(DistanceSensor.class, "sensor_distance");
-
+        // --- ADD THIS TO INCREASE RANGE TO 2M ---
+        // Note: This works if using the standard REV 2M Distance Sensor
+        // It sets the sensor to be more sensitive for longer distances
+        if (distanceSensor instanceof com.qualcomm.hardware.rev.Rev2mDistanceSensor) {
+            Rev2mDistanceSensor revSensor =
+                    (Rev2mDistanceSensor) distanceSensor;
+        }
 
         // --- Initialize Drivetrain ---
         leftFront = hardwareMap.get(DcMotor.class, "left_front_drive");
@@ -88,23 +103,30 @@ public class MainProgram extends OpMode {
         rightFront.setDirection(DcMotorSimple.Direction.FORWARD);
         rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        // --- Initialize Intake & Shooter ---
         intakeRoller = hardwareMap.get(DcMotor.class, "intake_roller");
         leftIntakeGate = hardwareMap.get(CRServo.class, "left_intake_gate");
         leftConveyorBelt = hardwareMap.get(DcMotor.class, "left_conveyor_belt");
         rightIntakeGate = hardwareMap.get(CRServo.class, "right_intake_gate");
         rightConveyorBelt = hardwareMap.get(DcMotor.class, "right_conveyor_belt");
 
+        // --- ADD THIS TO STOP INSTANTLY ---
+        leftConveyorBelt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightConveyorBelt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        intakeRoller.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
         // Set Intake/Shooter motor directions (TUNE THIS FOR YOUR ROBOT)
         intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE);
         leftConveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftIntakeGate.setPower(GATE_SERVO_POWER);
+//        leftIntakeGate.setPower(GATE_SERVO_POWER);
 
         rightConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD);
         rightIntakeGate.setDirection(CRServo.Direction.REVERSE);
-        rightIntakeGate.setPower(GATE_SERVO_POWER);
+//        rightIntakeGate.setPower(GATE_SERVO_POWER);
 
         // Ensure all mechanisms are stopped on initialization
+        leftIntakeGate.setPower(0);
+        rightIntakeGate.setPower(0);
+
         stopAllMechanisms();
 
         // --- Telemetry ---
@@ -179,6 +201,17 @@ public class MainProgram extends OpMode {
         }
         dpad_up_was_pressed = gamepad2.dpad_up; // Update edge detection
 
+        if (gamepad2.dpad_right && !dpad_right_was_pressed) {
+            mechanismState = (mechanismState == SystemState.REVERSE_OR_EMPTY_RIGHT_CHANNEL) ? SystemState.STOPPED : SystemState.REVERSE_OR_EMPTY_RIGHT_CHANNEL;
+        }
+        dpad_right_was_pressed = gamepad2.dpad_right; // Update edge detection
+
+        if (gamepad2.dpad_left && !dpad_left_was_pressed) {
+            mechanismState = (mechanismState == SystemState.REVERSE_OR_EMPTY_LEFT_CHANNEL) ? SystemState.STOPPED : SystemState.REVERSE_OR_EMPTY_LEFT_CHANNEL;
+        }
+        dpad_left_was_pressed = gamepad2.dpad_left; // Update edge detection
+
+
         // Check for 'Y' button (Shooting Sequence)
         if (gamepad2.y && !y2_was_pressed) {
             if (mechanismState != SystemState.SHOOTING_SEQUENCE) {
@@ -214,6 +247,12 @@ public class MainProgram extends OpMode {
             case INTAKE_ONLY:
                 runIntake();
                 break;
+            case REVERSE_OR_EMPTY_RIGHT_CHANNEL:
+                runEmptyRightChannel();
+                break;
+            case REVERSE_OR_EMPTY_LEFT_CHANNEL:
+                runEmptyLefttChannel();
+                break;
             case SHOOTING_SEQUENCE:
                 runShootingSequence();
                 break;
@@ -235,6 +274,18 @@ public class MainProgram extends OpMode {
         }
     }
 
+    public void runEmptyRightChannel() {
+        intakeRoller.setPower(-INTAKE_ROLLER_POWER);
+        rightIntakeGate.setPower(-GATE_SERVO_POWER);
+        rightConveyorBelt.setPower(-RIGHT_SHOOTER_CONVEYOR_POWER);
+
+    }
+    public void runEmptyLefttChannel() {
+        intakeRoller.setPower(-INTAKE_ROLLER_POWER);
+        leftIntakeGate.setPower(-GATE_SERVO_POWER);
+        leftConveyorBelt.setPower(-LEFT_SHOOTER_CONVEYOR_POWER);
+
+    }
     public void runShooterOnly() {
         leftConveyorBelt.setPower(LEFT_SHOOTER_CONVEYOR_POWER);
         rightConveyorBelt.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
@@ -252,28 +303,56 @@ public class MainProgram extends OpMode {
     public void runShootingSequence() {
         double elapsed = mechanismTimer.milliseconds();
 
-        // --- LEFT SIDE SEQUENCE ---
-        leftConveyorBelt.setPower(LEFT_SHOOTER_CONVEYOR_POWER);
-        rightConveyorBelt.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
+        // 1. Get current distance
+        double distInches = distanceSensor.getDistance(DistanceUnit.INCH);
 
-        if (elapsed > 1200 && elapsed <= 1200) {
+        // 2. Calculate Dynamic Power (y = 0.0028x + 0.60)
+        double calculatedPower;
+        // Check if out of range (> 2m) or flaky
+        if (distInches > 80 || Double.isNaN(distInches)) {
+            calculatedPower = 0.90;
+        } else {
+            calculatedPower = (distInches * 0.0028) + 0.60;
+        }
+
+        // 3. Calculate dynamicDelay (The Momentum/Wait Time)
+        double dynamicDelay;
+        if (distInches >= 105) {
+            dynamicDelay = 850; // Far range calibration
+        } else if (distInches >= 43 && distInches <= 46) {
+            dynamicDelay = 800; // Mid range calibration
+        } else {
+            // Apply the linear equation for any distance
+            // Clamping results between 750ms and 1000ms for safety
+            dynamicDelay = 900 - (distInches * 0.7936);
+            dynamicDelay = Math.max(750, Math.min(dynamicDelay, 1000));
+        }
+
+        // 4. Safety Clamps for Power
+        if (distInches < 5) calculatedPower = 0;
+        double finalPower = Math.max(0.4, Math.min(calculatedPower, 1.0));
+
+        // 5. Apply Power to Conveyors
+        leftConveyorBelt.setPower(finalPower);
+        rightConveyorBelt.setPower(finalPower);
+
+        // 6. Execute Gate Logic based on dynamicDelay
+        // The gate now opens after exactly the right amount of momentum is built
+        if (elapsed > dynamicDelay) {
             leftIntakeGate.setPower(GATE_SERVO_POWER);
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+            intakeRoller.setPower(INTAKE_ROLLER_POWER);
         } else {
             leftIntakeGate.setPower(0);
+            rightIntakeGate.setPower(0);
+            intakeRoller.setPower(0);
         }
 
-        // --- RIGHT SIDE SEQUENCE (Starting after or alongside) ---
-        // If you want them to fire one after another, increase the timing for the right side
-
-        if (elapsed > 1200 ) { // Fires 800ms after the left side (500 + 800)
-            rightIntakeGate.setPower(GATE_SERVO_POWER);
-//        }
-//        if (elapsed > 800 ) {//&& elapsed < 2000) { // Fires 800ms after the left side (500 + 800)
-            intakeRoller.setPower(RIGHT_SHOOTER_CONVEYOR_POWER);
-            leftIntakeGate.setPower(GATE_SERVO_POWER);
-        }
-
-        telemetry.addData("Shooting Status", "Elapsed: %.0f ms", elapsed);
+        // Telemetry for live debugging
+        telemetry.addData("Dist", "%.1f in", distInches);
+        telemetry.addData("Power", "%.2f", finalPower);
+        telemetry.addData("Target Delay", "%.0f ms", dynamicDelay);
+        telemetry.addData("Current Elapsed", "%.0f ms", elapsed);
     }
 
     /**
@@ -284,8 +363,28 @@ public class MainProgram extends OpMode {
         telemetry.addData("Forward", "%.2f", -gamepad1.left_stick_y);
         telemetry.addData("Strafe", "%.2f", gamepad1.left_stick_x);
         telemetry.addData("Rotate", "%.2f", gamepad1.right_stick_x);
+        // Get voltage from the hardwareMap (usually the first expansion hub)
+        double voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
+        telemetry.addData("Battery Voltage", "%.2fV", voltage);
+
+        if (voltage < 11.0) {
+            telemetry.addLine("!!! LOW BATTERY - CHANGE NOW !!!");
+        }
+
+        double distanceInches = distanceSensor.getDistance(DistanceUnit.INCH);
+
+        // Filter and display distance
+        // 80 inches is approx 2.03 meters
+        if (distanceInches > 0.5 && distanceInches < 80) {
+            telemetry.addData("Alliance Dist", "%.1f in (%.1f cm)",
+                    distanceInches, distanceInches * 2.54);
+        } else {
+            telemetry.addData("Alliance Dist", "OUT OF RANGE (> 2m)");
+        }
+
         telemetry.addData("--- Mechanisms ---", "");
         telemetry.addData("Mechanism State", mechanismState);
+
         telemetry.update();
     }
 
@@ -293,6 +392,8 @@ public class MainProgram extends OpMode {
 
     public void runIntake() {
         intakeRoller.setPower(INTAKE_ROLLER_POWER);
+        leftIntakeGate.setPower(0.5);
+        rightIntakeGate.setPower(0.5);
         // Turn on conveyors at lower power to help pull items in
 //        leftConveyorBelt.setPower(0.5);
 //        rightConveyorBelt.setPower(0.5);
@@ -308,3 +409,4 @@ public class MainProgram extends OpMode {
     }
 
 }
+
