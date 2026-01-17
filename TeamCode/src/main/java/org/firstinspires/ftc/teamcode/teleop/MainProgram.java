@@ -392,11 +392,6 @@ public class MainProgram extends OpMode {
 
     public void runIntake() {
         intakeRoller.setPower(INTAKE_ROLLER_POWER);
-        leftIntakeGate.setPower(0.5);
-        rightIntakeGate.setPower(0.5);
-        // Turn on conveyors at lower power to help pull items in
-//        leftConveyorBelt.setPower(0.5);
-//        rightConveyorBelt.setPower(0.5);
     }
 
     /**

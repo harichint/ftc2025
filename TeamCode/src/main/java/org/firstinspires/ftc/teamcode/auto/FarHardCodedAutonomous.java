@@ -30,7 +30,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     static final double COUNTS_PER_MOTOR_REV = 537.7;    // For goBILDA 5203-series motor
     static final double WHEEL_DIAMETER_INCHES = 3.78;
     static final double ROBOT_TRACK_WIDTH_INCHES = 14.0;   // Distance between left and right wheels
-    static final double LAUNCH_ANGLE_DEGREES = 55.0;
+    static final double LAUNCH_ANGLE_DEGREES = 60.0;
     private static final double SHOOTER_CONVEYOR_POWER = 1.0;
     private static final double GATE_SERVO_POWER = 1.0;
 
@@ -89,11 +89,11 @@ public class FarHardCodedAutonomous extends LinearOpMode {
             // Step 2: Now that we have arrived, scan for the sequence tag obelisk.
             telemetry.addLine("Step 2: Arrived, now scanning obelisk...");
             telemetry.update();
-            BallColor[] detectedSequence = readSequenceFromObelisk(2.0); // Scan for 2 seconds
+            BallColor[] detectedSequence = SEQ_3;//readSequenceFromObelisk(2.0); // Scan for 2 seconds
 
             telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
             telemetry.update();
-            sleep(500);
+//            sleep(500);
 
             // --- Conditional Logic: Only proceed if a sequence was found ---
             if (detectedSequence[0] != BallColor.UNKNOWN) {
@@ -258,8 +258,8 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         leftConveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE); // Spins to push balls up/out
 
         // Sensors
-        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
-        colorSensor.setGain(10f);
+//        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
+//        colorSensor.setGain(10f);
 
 //        huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
 //        if (!huskyLens.knock()) {
@@ -271,7 +271,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
     /** Performs a stationary scan for a sequence tag for a given duration. */
     private BallColor[] readSequenceFromObelisk(double scanSeconds) {
         ElapsedTime scanTimer = new ElapsedTime();
-        while(opModeIsActive() && scanTimer.seconds() < scanSeconds) {
+//        while(opModeIsActive() && scanTimer.seconds() < scanSeconds) {
 //            HuskyLens.Block[] blocks = huskyLens.blocks();
 //            if (blocks.length > 0) {
 //                for (HuskyLens.Block tag : blocks) {
@@ -282,7 +282,7 @@ public class FarHardCodedAutonomous extends LinearOpMode {
 //            }
 
             sleep(50);
-        }
+//        }
         telemetry.addLine("ERROR: No sequence tag found. Default sequence loaded.");
         return SEQ_3;
     }
@@ -310,9 +310,9 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         setDriveRunMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         setDrivePower(power);
-        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
-            // Optional: telemetry while driving
-        }
+//        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
+//            // Optional: telemetry while driving
+//        }
         setDrivePower(0);
         setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
