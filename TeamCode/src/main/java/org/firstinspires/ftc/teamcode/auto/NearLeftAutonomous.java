@@ -62,11 +62,11 @@ public class NearLeftAutonomous extends LinearOpMode {
             // Step 2: Turn to read sequnce based on selectedAlliance
             telemetry.addLine("Step 2: Turning to read sequence.");
             telemetry.update();
-            if (selectedAlliance == GoalDirection.RIGHT) {
-                turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
-            } else { // Alliance is BLUE
+            // if (selectedAlliance == GoalDirection.RIGHT) {
+            //     turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
+            // } else { // Alliance is BLUE
                 turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn Right for LEFT side Alliance
-            }
+            // }
             // Step 3: Now that we have arrived, scan for the sequence tag obelisk.
             telemetry.addLine("Step 3: Arrived, now scanning obelisk...");
             telemetry.update();
@@ -81,12 +81,12 @@ public class NearLeftAutonomous extends LinearOpMode {
 
                 // Step 3: Turn towards the correct goal based on the selected alliance and the same angle as the steps 2.
                 telemetry.addLine("Step 3: Turning towards goal...");
-                telemetry.update();
-                if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn RIGHT for Right side Alliance
-                } else { // Alliance example is BLUE
+                // telemetry.update();
+                // if (selectedAlliance == GoalDirection.RIGHT) {
+                //     turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn RIGHT for Right side Alliance
+                // } else { // Alliance example is BLUE
                     turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn LEFT for LEFT side Alliance
-                }
+                // }
 
                 // Step 4: shooting. // based on sequence shoot
                 runShootingSequence(detectedSequence);
@@ -99,11 +99,11 @@ public class NearLeftAutonomous extends LinearOpMode {
                 telemetry.update();
                 telemetry.addLine("Step 6a: Turning straight to go back.");
                 telemetry.update();
-                if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
-                } else { // Alliance is BLUE
+                // if (selectedAlliance == GoalDirection.RIGHT) {
+                //     turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
+                // } else { // Alliance is BLUE
                     turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn Right for LEFT side Alliance
-                }
+                // }
 
                 driveDistance(-30, 0.4);  // Move backward
             } else {
