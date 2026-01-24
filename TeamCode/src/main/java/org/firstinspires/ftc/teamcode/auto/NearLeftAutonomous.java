@@ -12,9 +12,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.Arrays;
 
-@Autonomous(name = "Near Hardcoded Auto")
+@Autonomous(name = "Near Left Auto")
 
-public class NearHardCodedAutonomous extends LinearOpMode {
+public class NearLeftAutonomous extends LinearOpMode {
 
         // --- ROBOT CONSTANTS (Tune These!) ---
         static final double COUNTS_PER_MOTOR_REV = 537.7;    // For goBILDA 5203-series motor
@@ -45,22 +45,7 @@ public class NearHardCodedAutonomous extends LinearOpMode {
         public void runOpMode() {
             initializeHardware();
 
-            // =============================== ALLIANCE SELECTION LOOP ===============================
-            // This loop runs during the INIT phase, before the driver presses START.
-            while (!isStarted() && !isStopRequested()) {
-                telemetry.addLine("--- Alliance Selection ---");
-                telemetry.addData("Selected Alliance", selectedAlliance);
-                telemetry.addLine("\nPress 'B' on Gamepad 1 for Right side goal post");
-                telemetry.addLine("Press 'X' on Gamepad 1 for Left side goal post");
-                telemetry.update();
-
-                if (gamepad1.b) {
-                    selectedAlliance = GoalDirection.RIGHT;
-                }
-                if (gamepad1.x) {
-                    selectedAlliance = GoalDirection.LEFT;
-                }
-            }
+            selectedAlliance = GoalDirection.LEFT;
             // =====================================================================================
 
             telemetry.addData("Ready to Run for", selectedAlliance + " Alliance");
