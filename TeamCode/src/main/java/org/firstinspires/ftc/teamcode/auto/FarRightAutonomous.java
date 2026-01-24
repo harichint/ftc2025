@@ -11,8 +11,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.Arrays;
 
-@Autonomous(name = "Far Hardcoded Auto")
-public class FarHardCodedAutonomous extends LinearOpMode {
+@Autonomous(name = "Far Right Auto")
+public class FarRightAutonomous extends LinearOpMode {
 
     // --- HARDWARE ---
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
@@ -53,25 +53,9 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         // This loop runs during the INIT phase, before the driver presses START.
         boolean selectionMade = false;
 
-        // while loop ensures the robot stays here until the START button is pressed
-        while (!isStarted() && !isStopRequested()) {
-            telemetry.addLine("--- Alliance Selection ---");
-            telemetry.addData("Status", selectionMade ? "READY - Selection Captured" : "WAITING FOR INPUT...");
-            telemetry.addData("Current Choice", selectedAlliance);
-            telemetry.addLine("\nPress 'X' for Left side goal (will turn Left)");
-            telemetry.addLine("Press 'B' for Right side goal (will turn Right)");
-            telemetry.addLine("\nPress START on Driver Station when selection is correct");
-            telemetry.update();
-
-            if (gamepad1.b) {
-                selectedAlliance = GoalDirection.RIGHT;
-                selectionMade = true;
-            }
-            if (gamepad1.x) {
-                selectedAlliance = GoalDirection.LEFT;
-                selectionMade = true;
-            }
-        }
+        selectedAlliance = GoalDirection.RIGHT;
+        selectionMade = true;
+       
         // =====================================================================================
 
         waitForStart();
