@@ -81,50 +81,101 @@ public class FarHardCodedAutonomous extends LinearOpMode {
             telemetry.addData("Executing for", selectedAlliance + " Goal");
             telemetry.update();
 
-            // Step 1: Drive diagonally - 70 inches forward
-            telemetry.addLine("Step 1: Driving 70 inches forward.");
-            telemetry.update();
-            driveMecanum(70, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
+//            // Step 1: Drive diagonally - 70 inches forward
+//            telemetry.addLine("Step 1: Driving 70 inches forward.");
+//            telemetry.update();
+//            driveMecanum(70, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
 
-            // Step 2: Now that we have arrived, scan for the sequence tag obelisk.
+            // Step 1: Now that we have arrived, scan for the sequence tag obelisk.
             telemetry.addLine("Step 2: Arrived, now scanning obelisk...");
             telemetry.update();
             BallColor[] detectedSequence = SEQ_3;//readSequenceFromObelisk(2.0); // Scan for 2 seconds
 
             telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
             telemetry.update();
-//            sleep(500);
 
             // --- Conditional Logic: Only proceed if a sequence was found ---
             if (detectedSequence[0] != BallColor.UNKNOWN) {
 
-                // Step 3: Turn towards the correct goal based on the selected alliance.
-                telemetry.addLine("Step 3: Turning towards goal...");
-                telemetry.update();
-                if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
-                } else { // Alliance is BLUE
-                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
-                }
+//                // Step 3: Turn towards the correct goal based on the selected alliance.
+//                telemetry.addLine("Step 3: Turning towards goal...");
+//                telemetry.update();
+//                if (selectedAlliance == GoalDirection.RIGHT) {
+//                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
+//                } else { // Alliance is BLUE
+//                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
+//                }
 
-                // Step 4: shooting based on ball sequence
+                // Step 2: shooting based on ball sequence
                 runShootingSequence(detectedSequence);
 
-                telemetry.addLine("Step 4: Shoot 3 balls...");
+                telemetry.addLine("Step 2: Shoot 3 balls...");
                 telemetry.update();
-                sleep(1000); // Run shooter for 1.5 seconds
+                sleep(500); // Run shooter for 1.5 seconds
 
-                // Step 5: Reposition after shooting.
+                // Step 3: Reposition after shooting.
                 if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn LEFT to straighten out
+                    turnRobot(-40, 0.5); // Turn LEFT to straighten out
                 } else { // Alliance is BLUE
-                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT to straighten out
+                    turnRobot(40, 0.5); // Turn RIGHT to straighten out
                 }
 
-                // Step 6: Drive backward.
-                telemetry.addLine("Step 6: Driving backward...");
+//                // Step 3: Drive backward.
+//                telemetry.addLine("Step 6: Driving backward...");
+//                telemetry.update();
+//                driveDistance(-10, 0.4);  // Move backward
+                /** step 4: straighten robot and move 1 foot, then turn to left or right 90 degrees
+                 * based on the GoalDirection, move  3 feet and intake balls, then come back 3 feet
+                 * turn opposite to goaldirection 90 degrees and move back 1 foot.
+                 * then run the shooting sequence
+                 * **/
+                // --- Step 5: Reposition, Intake, and Shoot Again ---
+                telemetry.addLine("Step 4: Straightening and moving to intake...");
                 telemetry.update();
-                driveDistance(-10, 0.4);  // Move backward
+
+                // 1. Move forward 1 foot (12 inches) to clear the shooting area
+                driveDistance(12, 0.5);
+
+                // 2. Turn 90 degrees based on GoalDirection
+                // If goal was RIGHT (turned right to shoot), we are now facing "right-ish".
+                // We turn 90 degrees towards the side of the field to find balls.
+                double sideTurnAngle = (selectedAlliance == GoalDirection.RIGHT) ? 130 : -130;
+                turnRobot(sideTurnAngle, 0.5);
+
+                // 3. Move 3 feet (36 inches) out to where the balls are
+                intakeRoller.setPower(0.8); // Start intake
+                leftIntakeGate.setPower(0.8);
+                leftConveyorBelt.setPower(-0.8);
+                rightConveyorBelt.setPower(-0.8);
+                driveDistance(36, 0.3);
+                // 4. Intake Balls
+                telemetry.addLine("Intaking balls...");
+                telemetry.update();
+
+                driveDistance(6, 0.1);      // Slow crawl forward to ensure pickup
+                sleep(800);                // Wait a second to suck balls in
+                intakeRoller.setPower(0);   // Stop intake
+                leftIntakeGate.setPower(0);
+                leftConveyorBelt.setPower(0);
+                rightConveyorBelt.setPower(0);
+
+                // 5. Come back 3 feet (plus the 6 inches we crawled)
+                driveDistance(-42, 0.6);
+
+                // 6. Turn opposite to goal direction 90 degrees to face the goal again
+                turnRobot(-sideTurnAngle, 0.5);
+
+                // 7. Move back 1 foot to return to the shooting line
+                driveDistance(-12, 0.5);
+                if (selectedAlliance == GoalDirection.RIGHT) {
+                    turnRobot(15, 0.5); // Turn LEFT to straighten out
+                } else { // Alliance is BLUE
+                    turnRobot(-15, 0.5); // Turn RIGHT to straighten out
+                }
+                // 8. Run the shooting sequence again with the newly intaked balls
+                telemetry.addLine("Step 5 Complete: Re-shooting...");
+                telemetry.update();
+                runShootingSequence(detectedSequence);
             } else {
                 // If the obelisk scan failed, stop here.
                 telemetry.addLine("ERROR: No sequence found. Stopping.");
@@ -214,8 +265,6 @@ public class FarHardCodedAutonomous extends LinearOpMode {
             leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
             sleep(200);
             leftIntakeGate.setPower(GATE_SERVO_POWER);
-//        sleep(5000);
-//        intakeRoller.setPower(SHOOTER_CONVEYOR_POWER);
         } else if (Arrays.equals(seq, SEQ_2)) {
             leftConveyorBelt.setPower(SHOOTER_CONVEYOR_POWER);
             sleep(150);
@@ -299,7 +348,6 @@ public class FarHardCodedAutonomous extends LinearOpMode {
 
         double countsPerInch = COUNTS_PER_MOTOR_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
 
-        // Mecanum drive formulas to calculate individual wheel targets
         int lfTicks = (int)((forwardInches + strafeInches) * countsPerInch);
         int rfTicks = (int)((forwardInches - strafeInches) * countsPerInch);
         int lbTicks = (int)((forwardInches - strafeInches) * countsPerInch);
@@ -310,13 +358,18 @@ public class FarHardCodedAutonomous extends LinearOpMode {
         setDriveRunMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         setDrivePower(power);
-//        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
-//            // Optional: telemetry while driving
-//        }
+
+        // --- FIXED: Uncommented this block ---
+        while (opModeIsActive() && (leftFrontDrive.isBusy() && rightFrontDrive.isBusy())) {
+            telemetry.addData("Status", "Driving to target...");
+            telemetry.addData("Ticks", "LF: %d, RF: %d",
+                    leftFrontDrive.getCurrentPosition(), rightFrontDrive.getCurrentPosition());
+            telemetry.update();
+        }
+
         setDrivePower(0);
         setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
-
     /** Turns the robot a specific angle using encoders. */
     private void turnRobot(double angle, double power) {
         double turnDistance = (angle / 360.0) * (Math.PI * ROBOT_TRACK_WIDTH_INCHES);
