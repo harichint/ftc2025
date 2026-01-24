@@ -97,15 +97,6 @@ public class FarHardCodedAutonomous extends LinearOpMode {
             // --- Conditional Logic: Only proceed if a sequence was found ---
             if (detectedSequence[0] != BallColor.UNKNOWN) {
 
-//                // Step 3: Turn towards the correct goal based on the selected alliance.
-//                telemetry.addLine("Step 3: Turning towards goal...");
-//                telemetry.update();
-//                if (selectedAlliance == GoalDirection.RIGHT) {
-//                    turnRobot(LAUNCH_ANGLE_DEGREES, 0.5); // Turn RIGHT for Right side Alliance
-//                } else { // Alliance is BLUE
-//                    turnRobot(-LAUNCH_ANGLE_DEGREES, 0.5);  // Turn LEFT for LEFT side Alliance
-//                }
-
                 // Step 2: shooting based on ball sequence
                 runShootingSequence(detectedSequence);
 
@@ -120,10 +111,6 @@ public class FarHardCodedAutonomous extends LinearOpMode {
                     turnRobot(40, 0.5); // Turn RIGHT to straighten out
                 }
 
-//                // Step 3: Drive backward.
-//                telemetry.addLine("Step 6: Driving backward...");
-//                telemetry.update();
-//                driveDistance(-10, 0.4);  // Move backward
                 /** step 4: straighten robot and move 1 foot, then turn to left or right 90 degrees
                  * based on the GoalDirection, move  3 feet and intake balls, then come back 3 feet
                  * turn opposite to goaldirection 90 degrees and move back 1 foot.

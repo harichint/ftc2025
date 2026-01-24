@@ -266,6 +266,7 @@ public class MainProgramVelo extends OpMode {
                 runIntake();
                 break;
             case REVERSE_OR_EMPTY_RIGHT_CHANNEL:
+                intakeRoller.setPower(-INTAKE_ROLLER_POWER);
                 rightIntakeGate.setPower(-GATE_SERVO_POWER);
                 rightConveyorBelt.setVelocity(REVERSE_VELOCITY);
                 break;
