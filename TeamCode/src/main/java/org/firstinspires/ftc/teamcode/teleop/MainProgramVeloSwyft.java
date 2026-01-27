@@ -2,13 +2,11 @@ package org.firstinspires.ftc.teamcode.teleop;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
-
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 
 /**
@@ -16,8 +14,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  * Gamepad 1 controls the robot's movement (Mecanum drive).
  * Gamepad 2 controls the Intake and Shooter mechanisms with an advanced stateful toggle system.
  */
-@TeleOp(name = "Main Program Velo distance", group = "Main")
-public class MainProgramVelo extends OpMode {
+@TeleOp(name = "Main Program Velo Swyft DS", group = "Main")
+public class MainProgramVeloSwyft extends OpMode {
 
     // --- DRIVETRAIN HARDWARE ---
     private DcMotor leftFront;
@@ -69,9 +67,8 @@ public class MainProgramVelo extends OpMode {
 
     private static final double GATE_SERVO_POWER = 1.0;
     // --- NEW SENSOR HARDWARE ---
-    private DistanceSensor distanceSensor;
-//    private static final double MAX_SHOOT_DISTANCE_INCHES = 108.0; // 9 feet
-
+//    private DistanceSensor distanceSensor;
+    private AnalogInput distanceSensor;
 
 
     /**
@@ -80,7 +77,15 @@ public class MainProgramVelo extends OpMode {
     @Override
     public void init() {
         // ---- Initialize Sensors and Camera ---
-        distanceSensor = hardwareMap.get(DistanceSensor.class, "sensor_distance");
+//        distanceSensor = hardwareMap.get(DistanceSensor.class, "sensor_distance");
+        distanceSensor = hardwareMap.get(AnalogInput.class, "ranger");
+//        // --- ADD THIS TO INCREASE RANGE TO 2M ---
+//        // Note: This works if using the standard REV 2M Distance Sensor
+//        // It sets the sensor to be more sensitive for longer distances
+//        if (distanceSensor instanceof com.qualcomm.hardware.rev.Rev2mDistanceSensor) {
+//            Rev2mDistanceSensor revSensor =
+//                    (Rev2mDistanceSensor) distanceSensor;
+//        }
 
         // --- Initialize Drivetrain ---
         leftFront = hardwareMap.get(DcMotor.class, "left_front_drive");
@@ -108,10 +113,14 @@ public class MainProgramVelo extends OpMode {
         rightConveyorBelt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         intakeRoller.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // Increase the "F" (Feedforward) and "P" values so the motor can reach higher RPMs
-        // These values are standard for GoBILDA 5202 motors to reach ~2500 ticks/s
-        leftConveyorBelt.setVelocityPIDFCoefficients(12, 3, 0, 12);
-        rightConveyorBelt.setVelocityPIDFCoefficients(12, 3, 0, 12);
+//        // Increase the "F" (Feedforward) and "P" values so the motor can reach higher RPMs
+//        // These values are standard for GoBILDA 5202 motors to reach ~2500 ticks/s
+//        leftConveyorBelt.setVelocityPIDFCoefficients(12, 3, 0, 12);
+//        rightConveyorBelt.setVelocityPIDFCoefficients(12, 3, 0, 12);
+        // Lowered Integral (3.0 -> 0.1) to prevent runaway speed
+        // Lowered Feedforward (12.0 -> 11.0) to prevent overshoot
+        leftConveyorBelt.setVelocityPIDFCoefficients(10.0, 0.1, 0.0, 11.0);
+        rightConveyorBelt.setVelocityPIDFCoefficients(10.0, 0.1, 0.0, 11.0);
 
         // Set Intake/Shooter motor directions (TUNE THIS FOR YOUR ROBOT)
         intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -298,9 +307,8 @@ public class MainProgramVelo extends OpMode {
 
         // 4. Trigger Gates ONLY when belts reach 90% of target velocity
         // We lowered this from 95% to 90% to help the motors fire more reliably at lower powers
-
-        boolean readyToShootLeft = (manual)? Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse) - 200
-                                    : Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
+        boolean readyToShootLeft = (manual)? Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse) - 150
+                : Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
         boolean readyToShootRight = Math.abs(rightConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
 
         // Combined check: Both must be at speed, and the target must be valid
@@ -354,12 +362,13 @@ public class MainProgramVelo extends OpMode {
     }
 
     public void runShootingSequence() {
-        double distInches = distanceSensor.getDistance(DistanceUnit.INCH);
-//        double distInches = (distanceSensor.getVoltage()*48.7) - 4.9;
+//        double distInches = distanceSensor.getDistance(DistanceUnit.INCH);
+        double distInches = (distanceSensor.getVoltage()*48.7) - 4.9;
         double targetVelocity, powerToUse, powerRatio;
+        powerToUse = 0.85;
         if (distInches > 80 || Double.isNaN(distInches)) {
             powerRatio = 0.90; // Default for out of range
-            powerToUse = 0.80;
+
         } else if (distInches < 5) {
             powerRatio = 0;    // Safety: don't shoot if touching wall
             powerToUse = 0;
@@ -367,11 +376,9 @@ public class MainProgramVelo extends OpMode {
             // CLOSE RANGE LOGIC:
             // This formula ensures that even at 10 inches, the power stays around 0.68
             powerRatio = (distInches * 0.001) + 0.67;
-            powerToUse = 0.70;
         } else {
             // LONG RANGE LOGIC:
             powerRatio = (distInches * 0.00238) + 0.643;
-            powerToUse = 0.80;
         }
 
         // 2. Calculate Final Velocity
@@ -387,12 +394,19 @@ public class MainProgramVelo extends OpMode {
         double voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
         telemetry.addData("Battery", "%.2fV", voltage);
 
-        double distanceInches = distanceSensor.getDistance(DistanceUnit.INCH);
-        if (distanceInches > 0.5 && distanceInches < 80) {
-            telemetry.addData("Dist", "%.1f in", distanceInches);
-        } else {
-            telemetry.addData("Dist", "OUT OF RANGE");
-        }
+//        double distanceInches = distanceSensor.getDistance(DistanceUnit.INCH);
+        // 2. Sensor Distance Calculation (Analog to Inches)
+        // Formula used in runShootingSequence: (voltage * 48.7) - 4.9
+        double sensorVoltage = distanceSensor.getVoltage();
+        double distanceInches = (sensorVoltage * 48.7) - 4.9;
+
+        telemetry.addData("Raw Voltage", "%.3fV", sensorVoltage);
+        telemetry.addData("Dist", "%.1f in", distanceInches);
+//        if (distanceInches > 0.5 && distanceInches < 80) {
+//            telemetry.addData("Dist", "%.1f in", distanceInches);
+//        } else {
+//            telemetry.addData("Dist", "OUT OF RANGE");
+//        }
 
         telemetry.addData("--- Mechanisms ---", "");
         telemetry.addData("State", mechanismState);
