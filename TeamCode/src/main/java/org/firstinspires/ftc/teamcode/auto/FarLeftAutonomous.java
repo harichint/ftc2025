@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.auto;
 import com.qualcomm.hardware.dfrobot.HuskyLens;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -18,7 +19,9 @@ public class FarLeftAutonomous extends LinearOpMode {
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
 //    private HuskyLens huskyLens;
     private NormalizedColorSensor colorSensor;
-     private DcMotor intakeRoller;
+    private AnalogInput distanceSensor;
+
+    private DcMotor intakeRoller;
     // Channel 1
     private CRServo rightIntakeGate; //servo
     private DcMotor rightConveyorBelt;//shooter
@@ -108,7 +111,7 @@ public class FarLeftAutonomous extends LinearOpMode {
 
                 // 1. Move forward 1 foot (12 inches) to clear the shooting area
                 driveDistance(12, 0.5);
-
+                showLiveStats();
                 // 2. Turn 90 degrees based on GoalDirection
                 // If goal was RIGHT (turned right to shoot), we are now facing "right-ish".
                 // We turn 90 degrees towards the side of the field to find balls.
@@ -149,6 +152,7 @@ public class FarLeftAutonomous extends LinearOpMode {
                 telemetry.addLine("Step 5 Complete: Re-shooting...");
                 telemetry.update();
                 runShootingSequence(detectedSequence);
+                showLiveStats();
             } else {
                 // If the obelisk scan failed, stop here.
                 telemetry.addLine("ERROR: No sequence found. Stopping.");
@@ -278,6 +282,7 @@ public class FarLeftAutonomous extends LinearOpMode {
         rightConveyorBelt.setDirection(DcMotorSimple.Direction.FORWARD); // Spins to push balls up/out
         leftIntakeGate.setDirection(DcMotorSimple.Direction.FORWARD);   // Spins to help feed conveyor
         leftConveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE); // Spins to push balls up/out
+        distanceSensor = hardwareMap.get(AnalogInput.class, "ranger");
 
         // Sensors
 //        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
@@ -334,10 +339,11 @@ public class FarLeftAutonomous extends LinearOpMode {
 
         // --- FIXED: Uncommented this block ---
         while (opModeIsActive() && (leftFrontDrive.isBusy() && rightFrontDrive.isBusy())) {
-            telemetry.addData("Status", "Driving to target...");
-            telemetry.addData("Ticks", "LF: %d, RF: %d",
-                    leftFrontDrive.getCurrentPosition(), rightFrontDrive.getCurrentPosition());
-            telemetry.update();
+            showLiveStats();
+//            telemetry.addData("Status", "Driving to target...");
+//            telemetry.addData("Ticks", "LF: %d, RF: %d",
+//                    leftFrontDrive.getCurrentPosition(), rightFrontDrive.getCurrentPosition());
+//            telemetry.update();
         }
 
         setDrivePower(0);
@@ -356,7 +362,7 @@ public class FarLeftAutonomous extends LinearOpMode {
 
         setDrivePower(power);
         while (opModeIsActive() && leftFrontDrive.isBusy()) {
-            // Optional telemetry
+            showLiveStats();
         }
         setDrivePower(0);
         setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -380,5 +386,28 @@ public class FarLeftAutonomous extends LinearOpMode {
         rightFrontDrive.setTargetPosition(rf);
         leftBackDrive.setTargetPosition(lb);
         rightBackDrive.setTargetPosition(rb);
+    }
+
+    /**
+     * Updates telemetry with real-time distance and estimated angle.
+     */
+    private void showLiveStats() {
+        // Calculate Distance from Analog Sensor
+        double sensorVoltage = distanceSensor.getVoltage();
+        double distanceInches = (sensorVoltage * 48.7) - 4.9;
+
+        // Display Distance
+        telemetry.addData("Dist to Goal", "%.1f in", distanceInches);
+
+        // Display Angle
+        // Note: In LinearOpMode, we show the current target or estimated
+        // state based on the alliance selection.
+        telemetry.addData("Goal Side", selectedAlliance);
+
+        // Show motor positions to verify movement
+        telemetry.addData("Wheel Ticks", "LF: %d, RF: %d",
+                leftFrontDrive.getCurrentPosition(), rightFrontDrive.getCurrentPosition());
+
+        telemetry.update();
     }
 }
