@@ -67,7 +67,6 @@ public class MainProgramVeloSwyft extends OpMode {
 
     private static final double GATE_SERVO_POWER = 1.0;
     // --- NEW SENSOR HARDWARE ---
-//    private DistanceSensor distanceSensor;
     private AnalogInput distanceSensor;
 
 
@@ -77,15 +76,7 @@ public class MainProgramVeloSwyft extends OpMode {
     @Override
     public void init() {
         // ---- Initialize Sensors and Camera ---
-//        distanceSensor = hardwareMap.get(DistanceSensor.class, "sensor_distance");
         distanceSensor = hardwareMap.get(AnalogInput.class, "ranger");
-//        // --- ADD THIS TO INCREASE RANGE TO 2M ---
-//        // Note: This works if using the standard REV 2M Distance Sensor
-//        // It sets the sensor to be more sensitive for longer distances
-//        if (distanceSensor instanceof com.qualcomm.hardware.rev.Rev2mDistanceSensor) {
-//            Rev2mDistanceSensor revSensor =
-//                    (Rev2mDistanceSensor) distanceSensor;
-//        }
 
         // --- Initialize Drivetrain ---
         leftFront = hardwareMap.get(DcMotor.class, "left_front_drive");
@@ -361,7 +352,6 @@ public class MainProgramVeloSwyft extends OpMode {
     }
 
     public void runShootingSequence() {
-//        double distInches = distanceSensor.getDistance(DistanceUnit.INCH);
         double distInches = (distanceSensor.getVoltage()*48.7) - 4.9;
         double targetVelocity, powerToUse, powerRatio;
         powerToUse = 0.85;
@@ -393,7 +383,6 @@ public class MainProgramVeloSwyft extends OpMode {
         double voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
         telemetry.addData("Battery", "%.2fV", voltage);
 
-//        double distanceInches = distanceSensor.getDistance(DistanceUnit.INCH);
         // 2. Sensor Distance Calculation (Analog to Inches)
         // Formula used in runShootingSequence: (voltage * 48.7) - 4.9
         double sensorVoltage = distanceSensor.getVoltage();
@@ -401,11 +390,6 @@ public class MainProgramVeloSwyft extends OpMode {
 
         telemetry.addData("Raw Voltage", "%.3fV", sensorVoltage);
         telemetry.addData("Dist", "%.1f in", distanceInches);
-//        if (distanceInches > 0.5 && distanceInches < 80) {
-//            telemetry.addData("Dist", "%.1f in", distanceInches);
-//        } else {
-//            telemetry.addData("Dist", "OUT OF RANGE");
-//        }
 
         telemetry.addData("--- Mechanisms ---", "");
         telemetry.addData("State", mechanismState);
