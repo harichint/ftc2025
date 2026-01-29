@@ -119,9 +119,8 @@ public class MainProgramVeloSwyft extends OpMode {
 //        rightConveyorBelt.setVelocityPIDFCoefficients(12, 3, 0, 12);
         // Lowered Integral (3.0 -> 0.1) to prevent runaway speed
         // Lowered Feedforward (12.0 -> 11.0) to prevent overshoot
-        leftConveyorBelt.setVelocityPIDFCoefficients(10.0, 0.1, 0.0, 11.0);
-        rightConveyorBelt.setVelocityPIDFCoefficients(10.0, 0.1, 0.0, 11.0);
-
+        leftConveyorBelt.setVelocityPIDFCoefficients(11.0, 0.3, 0.0, 11.0);
+        rightConveyorBelt.setVelocityPIDFCoefficients(11.0, 0.3, 0.0, 11.0);
         // Set Intake/Shooter motor directions (TUNE THIS FOR YOUR ROBOT)
         intakeRoller.setDirection(DcMotorSimple.Direction.REVERSE);
         leftConveyorBelt.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -277,13 +276,13 @@ public class MainProgramVeloSwyft extends OpMode {
                 runShootingSequence();
                 break;
             case MANUAL_FAR_SHOOTING: // left_trigger
-                runShootingActually(1600, 0.90, true); //80 inches from goal
+                runShootingActually(1650, 0.90, true); //80 inches from goal
                 break;
             case MANUAL_MEDIUM_SHOOTING: // dpad_up
-                runShootingActually(1450, 0.75, true); //60 inches from goal
+                runShootingActually(1500, 0.90, true); //60 inches from goal
                 break;
             case MANUAL_NEAR_SHOOTING: // dpad_down
-                runShootingActually(1300, 0.70, true); //40 inches from goal
+                runShootingActually(1450, 0.90, true); //40 inches from goal
                 break;
             case LEFT_REVERSED:
                 leftConveyorBelt.setVelocity(REVERSE_VELOCITY);
@@ -309,7 +308,7 @@ public class MainProgramVeloSwyft extends OpMode {
         // We lowered this from 95% to 90% to help the motors fire more reliably at lower powers
         boolean readyToShootLeft = (manual)? Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse) - 150
                 : Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
-        boolean readyToShootRight = Math.abs(rightConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
+        boolean readyToShootRight = Math.abs(rightConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse) + 100;
 
         // Combined check: Both must be at speed, and the target must be valid
         // Logic for Left side
@@ -375,7 +374,7 @@ public class MainProgramVeloSwyft extends OpMode {
         } else if (distInches < 50) {
             // CLOSE RANGE LOGIC:
             // This formula ensures that even at 10 inches, the power stays around 0.68
-            powerRatio = (distInches * 0.001) + 0.67;
+            powerRatio = (distInches * 0.0015) + 0.67;
         } else {
             // LONG RANGE LOGIC:
             powerRatio = (distInches * 0.00238) + 0.643;

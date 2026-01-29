@@ -29,7 +29,7 @@ public class NearRightAutonomous extends LinearOpMode {
         private final BallColor[] SEQ_UNKNOWN = {BallColor.UNKNOWN};
         // --- HARDWARE ---
         private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
-//        private HuskyLens huskyLens;
+        private HuskyLens huskyLens;
         private NormalizedColorSensor colorSensor;
         private DcMotor intakeRoller;
 
@@ -240,26 +240,26 @@ public class NearRightAutonomous extends LinearOpMode {
             colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
             colorSensor.setGain(10f);
 
-//            huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
-//            if (!huskyLens.knock()) {
-//                telemetry.addData("FATAL", "HuskyLens not responding!");
-//            }
-//            huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
+            huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
+            if (!huskyLens.knock()) {
+                telemetry.addData("FATAL", "HuskyLens not responding!");
+            }
+            huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
         }
 
         /** Performs a stationary scan for a sequence tag for a given duration. */
         private BallColor[] readSequenceFromObelisk(double scanSeconds) {
             ElapsedTime scanTimer = new ElapsedTime();
             while(opModeIsActive() && scanTimer.seconds() < scanSeconds) {
-//                HuskyLens.Block[] blocks = huskyLens.blocks();
-//                if (blocks.length > 0) {
-//                    for (HuskyLens.Block tag : blocks) {
-//                        if (tag.id == 1) return SEQ_1;
-//                        if (tag.id == 2) return SEQ_2;
-//                        if (tag.id == 3) return SEQ_3;
-//                    }
-//                }
-//                sleep(50);
+                HuskyLens.Block[] blocks = huskyLens.blocks();
+                if (blocks.length > 0) {
+                    for (HuskyLens.Block tag : blocks) {
+                        if (tag.id == 1) return SEQ_1;
+                        if (tag.id == 2) return SEQ_2;
+                        if (tag.id == 3) return SEQ_3;
+                    }
+                }
+                sleep(50);
             }
             telemetry.addLine("ERROR: No sequence found. Default Sequence loaded");
             return SEQ_1;

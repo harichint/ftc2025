@@ -17,7 +17,7 @@ public class FarLeftAutonomous extends LinearOpMode {
 
     // --- HARDWARE ---
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
-//    private HuskyLens huskyLens;
+    private HuskyLens huskyLens;
     private NormalizedColorSensor colorSensor;
     private AnalogInput distanceSensor;
 
@@ -73,15 +73,16 @@ public class FarLeftAutonomous extends LinearOpMode {
 //            // Step 1: Drive diagonally - 70 inches forward
 //            telemetry.addLine("Step 1: Driving 70 inches forward.");
 //            telemetry.update();
-//            driveMecanum(70, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
-
+            driveMecanum(40, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
             // Step 1: Now that we have arrived, scan for the sequence tag obelisk.
             telemetry.addLine("Step 2: Arrived, now scanning obelisk...");
             telemetry.update();
-            BallColor[] detectedSequence = SEQ_3;//readSequenceFromObelisk(2.0); // Scan for 2 seconds
+            BallColor[] detectedSequence = readSequenceFromObelisk(2.0); // Scan for 2 seconds
 
-            telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
+            telemetry.addData("Sequence Found", Arrays.toString(detectedSequence)).setRetained(true);
             telemetry.update();
+
+            driveMecanum(-40, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
 
             // --- Conditional Logic: Only proceed if a sequence was found ---
             if (detectedSequence[0] != BallColor.UNKNOWN) {
@@ -285,31 +286,31 @@ public class FarLeftAutonomous extends LinearOpMode {
         distanceSensor = hardwareMap.get(AnalogInput.class, "ranger");
 
         // Sensors
-//        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
-//        colorSensor.setGain(10f);
+        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "sensor_color");
+        colorSensor.setGain(10f);
 
-//        huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
-//        if (!huskyLens.knock()) {
-//            telemetry.addData("FATAL", "HuskyLens not responding!");
-//        }
-//        huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
+        huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
+        if (!huskyLens.knock()) {
+            telemetry.addData("FATAL", "HuskyLens not responding!");
+        }
+        huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
     }
 
     /** Performs a stationary scan for a sequence tag for a given duration. */
     private BallColor[] readSequenceFromObelisk(double scanSeconds) {
         ElapsedTime scanTimer = new ElapsedTime();
-//        while(opModeIsActive() && scanTimer.seconds() < scanSeconds) {
-//            HuskyLens.Block[] blocks = huskyLens.blocks();
-//            if (blocks.length > 0) {
-//                for (HuskyLens.Block tag : blocks) {
-//                    if (tag.id == 1) return SEQ_1;
-//                    if (tag.id == 2) return SEQ_2;
-//                    if (tag.id == 3) return SEQ_3;
-//                }
-//            }
+        while(opModeIsActive() && scanTimer.seconds() < scanSeconds) {
+            HuskyLens.Block[] blocks = huskyLens.blocks();
+            if (blocks.length > 0) {
+                for (HuskyLens.Block tag : blocks) {
+                    if (tag.id == 1) return SEQ_1;
+                    if (tag.id == 2) return SEQ_2;
+                    if (tag.id == 3) return SEQ_3;
+                }
+            }
 
             sleep(50);
-//        }
+        }
         telemetry.addLine("ERROR: No sequence tag found. Default sequence loaded.");
         return SEQ_3;
     }
