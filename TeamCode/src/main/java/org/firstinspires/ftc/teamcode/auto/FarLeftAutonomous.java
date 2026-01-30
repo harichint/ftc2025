@@ -42,9 +42,6 @@ public class FarLeftAutonomous extends LinearOpMode {
     private final BallColor[] SEQ_2 = {BallColor.PURPLE, BallColor.GREEN, BallColor.PURPLE};
     private final BallColor[] SEQ_1 = {BallColor.PURPLE, BallColor.PURPLE, BallColor.GREEN};
 
-    // State for shooting latch
-    private boolean isShootingLatch = false;
-
     @Override
     public void runOpMode() {
         initializeHardware();
@@ -57,54 +54,52 @@ public class FarLeftAutonomous extends LinearOpMode {
             telemetry.update();
 
             // Step 1: Drive forward and scan.
-            double distanceToTag = driveMecanum(60, 0, 0.7, true);
-            
-            telemetry.addData("Final Sequence", Arrays.toString(detectedSequence));
-            telemetry.addData("Distance to Tag", "%.2f in", distanceToTag);
-            telemetry.update();
+            double distanceToTag = driveMecanum(60, 0, 0.3, true);
             
             if (detectedSequence[0] == BallColor.UNKNOWN) {
                 telemetry.addLine("Scanning one last time at stop...");
                 telemetry.update();
-                detectedSequence = readSequenceFromObelisk(1.5);
+                detectedSequence = readSequenceFromObelisk(1.0);
             }
-
-//            sleep(200);
 
             // Return to start line
             driveMecanum(-distanceToTag, 0, 0.7, false);
 
             if (detectedSequence[0] != BallColor.UNKNOWN) {
-                turnRobot(40, 0.5); 
+                turnRobot(30, 0.5);
 
-                // Increased shooting to 4 seconds to ensure all balls clear
-                runShootingSequence(4.0);
-
-//                turnRobot(-40, 0.5);
-
-                driveDistance(12, 0.5, false);
-
-                double sideTurnAngle = 90;
-                turnRobot(sideTurnAngle, 0.5);
-
-                intakeRoller.setPower(0.8);
+                // FIXED: Use runShootingSequence (looped) instead of runShootingActually (one-off)
+                runShootingSequence(4.0, 1750, 0.90);
+                
+                // Collect Balls Sequence
+                intakeRoller.setPower(1.0);
                 leftIntakeGate.setPower(0.8);
+                rightIntakeGate.setPower(0.8);
                 leftConveyorBelt.setPower(-0.8);
                 rightConveyorBelt.setPower(-0.8);
 
-                driveDistance(36, 0.5, false);
-                driveDistance(6, 0.2, false);      
-                sleep(200);
+                // Curve LEFT
+                driveCurve(40.0, 72.0, 0.5);
+
+                // Straight to collect balls
+                driveDistance(9, 0.2, false);
+                sleep(100);
                 stopAllMechanisms();
 
-                driveDistance(-42, 0.6, false);
-                turnRobot(-sideTurnAngle, 0.5); 
-                driveDistance(-12, 0.5, false);
 
-                turnRobot(40, 0.5);
+                driveDistance(-6, 0.2, false);
+                driveCurve(-40.0, -72.0, 0.5);
+                // Start return motors
 
-                // Final shooting for 4 seconds
-                runShootingSequence(4.0);
+                leftConveyorBelt.setPower(-1.0);
+                rightConveyorBelt.setPower(-1.0);
+                leftIntakeGate.setPower(-0.8);
+                rightIntakeGate.setPower(-0.8);
+                sleep(500);
+
+                // Final shooting
+                runShootingSequence(4.0, 1750, 0.90);
+
                 showLiveStats();
             } else {
                 telemetry.addLine("ERROR: No sequence found. Stopping.");
@@ -113,83 +108,52 @@ public class FarLeftAutonomous extends LinearOpMode {
         }
     }
 
-
-    public void runShootingActually(double targetVelocity, double powerToUse, boolean allowGates) {
-        leftConveyorBelt.setVelocity(targetVelocity);
-        rightConveyorBelt.setVelocity(targetVelocity);
-
-        // Check if motors are within threshold
-        boolean readyLeft = Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
-        boolean readyRight = Math.abs(rightConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
-
-        // Latch logic: if we are allowed to shoot and motors are ready, OPEN GATES and KEEP THEM OPEN
-        if (allowGates && (isShootingLatch || (readyLeft && readyRight)) && targetVelocity > 100) {
-            isShootingLatch = true; // Stay in shooting mode
-            leftIntakeGate.setPower(GATE_SERVO_POWER);
-            rightIntakeGate.setPower(GATE_SERVO_POWER);
-            intakeRoller.setPower(INTAKE_ROLLER_POWER);
-        } else {
-            // Only reset latch if we aren't supposed to be shooting anymore
-            if (!allowGates) isShootingLatch = false;
-            
-            leftIntakeGate.setPower(0);
-            rightIntakeGate.setPower(0);
-            intakeRoller.setPower(0);
-        }
-        
-        telemetry.addData("Shooting", isShootingLatch ? "FIRING" : "SPINNING UP");
-        telemetry.addData("Target", "%.0f", targetVelocity);
-        telemetry.addData("L-Actual", "%.0f", leftConveyorBelt.getVelocity());
-        telemetry.addData("R-Actual", "%.0f", rightConveyorBelt.getVelocity());
-        telemetry.update();
-    }
-
-
-    public void runShootingSequence(double durationSeconds) {
+    /**
+     * Looped shooting sequence to allow motors to reach target speed in Autonomous.
+     */
+    public void runShootingSequence(double durationSeconds, double targetVelocity, double thresholdPercent) {
         ElapsedTime shootTimer = new ElapsedTime();
-        isShootingLatch = false; // Reset latch for new sequence
-        
-        double distInches = (distanceSensor.getVoltage() * 48.7) - 4.9;
-        
-        // Safety: ensure distance is within reasonable bounds
-        if (distInches < 5 || distInches > 100 || Double.isNaN(distInches)) {
-            distInches = 30.0; 
-        }
-
-        double powerRatio;
-        if (distInches < 50) {
-            powerRatio = (distInches * 0.0015) + 0.67;
-        } else {
-            powerRatio = (distInches * 0.00238) + 0.643;
-        }
-
-        double targetVelocity = Math.min(powerRatio * MAX_VELOCITY, MAX_VELOCITY);
-        // Lowered firing threshold to 70% to be more reliable
-        double firingThreshold = 0.70;
-
-        // Loop for the specified duration
         while (opModeIsActive() && shootTimer.seconds() < durationSeconds) {
-            // Increased pre-spin to 0.8s for better torque
-            runShootingActually(targetVelocity, firingThreshold, shootTimer.seconds() > 0.8);
+            runShootingActually(targetVelocity, thresholdPercent);
+            showLiveStats(); // Updates telemetry every loop
             sleep(20);
         }
-        
         stopAllMechanisms();
     }
 
-    public void stopRightShooter() {
-        rightConveyorBelt.setPower(0);
-        rightIntakeGate.setPower(0);
-    }
+    public void runShootingActually(double targetVelocity, double powerToUse) {
+        leftConveyorBelt.setVelocity(targetVelocity);
+        rightConveyorBelt.setVelocity(targetVelocity);
 
-    public void stopLeftShooter() {
-        leftConveyorBelt.setPower(0);
-        leftIntakeGate.setPower(0);
+        double threshold = targetVelocity * powerToUse;
+
+        boolean readyLeft = Math.abs(leftConveyorBelt.getVelocity()) >= threshold;
+        boolean readyRight = Math.abs(rightConveyorBelt.getVelocity()) >= threshold;
+
+        if (readyLeft && targetVelocity > 100) {
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
+        } else if (Math.abs(leftConveyorBelt.getVelocity()) < (threshold - 100)) {
+            leftIntakeGate.setPower(0);
+        }
+
+        if (readyRight && targetVelocity > 100) {
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+        } else if (Math.abs(rightConveyorBelt.getVelocity()) < (threshold - 100)) {
+            rightIntakeGate.setPower(0);
+        }
+
+        if ((readyLeft || readyRight) && targetVelocity > 100) {
+            intakeRoller.setPower(INTAKE_ROLLER_POWER);
+        } else {
+            intakeRoller.setPower(0);
+        }
     }
 
     public void stopAllMechanisms() {
-        stopRightShooter();
-        stopLeftShooter();
+        leftConveyorBelt.setPower(0);
+        rightConveyorBelt.setPower(0);
+        leftIntakeGate.setPower(0);
+        rightIntakeGate.setPower(0);
         intakeRoller.setPower(0);
     }
 
@@ -223,15 +187,13 @@ public class FarLeftAutonomous extends LinearOpMode {
         rightConveyorBelt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         intakeRoller.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // Using default PID coefficients for stability
         distanceSensor = hardwareMap.get(AnalogInput.class, "ranger");
 
         huskyLens = hardwareMap.get(HuskyLens.class, "Huskylens");
         if (!huskyLens.knock()) {
-            telemetry.addData("HuskyLens", "NOT CONNECTED! Check cable.");
+            telemetry.addData("HuskyLens", "NOT CONNECTED!");
         } else {
             huskyLens.selectAlgorithm(HuskyLens.Algorithm.TAG_RECOGNITION);
-            telemetry.addData(">>", "HuskyLens Initialized.");
         }
         telemetry.update();
     }
@@ -247,14 +209,51 @@ public class FarLeftAutonomous extends LinearOpMode {
                     if (tag.id == 3) return SEQ_3;
                 }
             }
-            telemetry.addData("Scanning", "%.1f / %.1f", scanTimer.seconds(), scanSeconds);
-            telemetry.update();
+            showLiveStats();
         }
         return SEQ_1;
     }
 
     private double driveDistance(double distanceInches, double power, boolean scan) {
         return driveMecanum(distanceInches, 0, power, scan);
+    }
+
+    private void driveCurve(double leftInches, double rightInches, double power) {
+        double countsPerInch = COUNTS_PER_MOTOR_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
+        int leftTarget = (int)(leftInches * countsPerInch);
+        int rightTarget = (int)(rightInches * countsPerInch);
+
+        setDriveRunMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        double ratio = Math.abs(leftInches / rightInches);
+        double leftPower, rightPower;
+
+        if (Math.abs(leftInches) > Math.abs(rightInches)) {
+            leftPower = power * Math.signum(leftInches);
+            rightPower = (power / ratio) * Math.signum(rightInches);
+        } else {
+            rightPower = power * Math.signum(rightInches);
+            leftPower = (power * ratio) * Math.signum(leftInches);
+        }
+
+        leftFrontDrive.setPower(leftPower);
+        leftBackDrive.setPower(leftPower);
+        rightFrontDrive.setPower(rightPower);
+        rightBackDrive.setPower(rightPower);
+
+        while (opModeIsActive()) {
+            boolean leftDone = Math.abs(leftFrontDrive.getCurrentPosition()) >= Math.abs(leftTarget);
+            boolean rightDone = Math.abs(rightFrontDrive.getCurrentPosition()) >= Math.abs(rightTarget);
+
+            if (leftDone) { leftFrontDrive.setPower(0); leftBackDrive.setPower(0); }
+            if (rightDone) { rightFrontDrive.setPower(0); rightBackDrive.setPower(0); }
+            if (leftDone && rightDone) break;
+            showLiveStats();
+            sleep(10);
+        }
+        setDrivePower(0);
+        setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     private double driveMecanum(double forwardInches, double strafeInches, double power, boolean scan) {
@@ -281,9 +280,7 @@ public class FarLeftAutonomous extends LinearOpMode {
                         else if (tag.id == 3) detectedSequence = SEQ_3;
                     }
                 }
-                if (detectedSequence[0] != BallColor.UNKNOWN) {
-                    break;
-                }
+                if (detectedSequence[0] != BallColor.UNKNOWN) break;
             }
             showLiveStats();
             sleep(20); 
@@ -312,12 +309,11 @@ public class FarLeftAutonomous extends LinearOpMode {
         setDrivePower(0);
         setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
-
-    private void setDrivePower(double power) {
-        leftFrontDrive.setPower(power);
-        rightFrontDrive.setPower(power);
-        leftBackDrive.setPower(power);
-        rightBackDrive.setPower(power);
+    private void setTargetPosition(int lf, int rf, int lb, int rb) {
+        leftFrontDrive.setTargetPosition(lf);
+        rightFrontDrive.setTargetPosition(rf);
+        leftBackDrive.setTargetPosition(lb);
+        rightBackDrive.setTargetPosition(rb);
     }
 
     private void setDriveRunMode(DcMotor.RunMode mode) {
@@ -327,19 +323,22 @@ public class FarLeftAutonomous extends LinearOpMode {
         rightBackDrive.setMode(mode);
     }
 
-    private void setTargetPosition(int lf, int rf, int lb, int rb) {
-        leftFrontDrive.setTargetPosition(lf);
-        rightFrontDrive.setTargetPosition(rf);
-        leftBackDrive.setTargetPosition(lb);
-        rightBackDrive.setTargetPosition(rb);
+    private void setDrivePower(double power) {
+        leftFrontDrive.setPower(power);
+        rightFrontDrive.setPower(power);
+        leftBackDrive.setPower(power);
+        rightBackDrive.setPower(power);
     }
 
     private void showLiveStats() {
         double voltage = distanceSensor.getVoltage();
-        double inches = (voltage * 48.7) - 4.9;
+        double distInches = (voltage * 48.7) - 4.9;
 
-        telemetry.addData("Dist Sensor", "Raw: %.2fV, Calc: %.1f in", voltage, inches);
+        telemetry.addData("--- SENSORS ---", "");
+        telemetry.addData("Distance", "%.1f in", distInches);
         telemetry.addData("Husky ID", detectedSequence[0]);
+        telemetry.addData("Shooter Vel (L/R)", "%.0f / %.0f", 
+            leftConveyorBelt.getVelocity(), rightConveyorBelt.getVelocity());
         telemetry.update();
     }
 }
