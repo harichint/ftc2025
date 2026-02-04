@@ -54,8 +54,11 @@ public class FarLeftAutonomous extends LinearOpMode {
             telemetry.update();
 
             // Step 1: Drive forward and scan.
-            double distanceToTag = driveMecanum(60, 0, 0.3, true);
-            
+            double distanceToTag = driveMecanum(-50, 0, 0.7, true);
+            turnRobot(-60, 0.7);
+
+            intakeRoller.setPower(0.0);
+
             if (detectedSequence[0] == BallColor.UNKNOWN) {
                 telemetry.addLine("Scanning one last time at stop...");
                 telemetry.update();
@@ -63,13 +66,13 @@ public class FarLeftAutonomous extends LinearOpMode {
             }
 
             // Return to start line
-            driveMecanum(-distanceToTag, 0, 0.7, false);
+            //driveMecanum(-distanceToTag, 0, 0.7, false);
 
             if (detectedSequence[0] != BallColor.UNKNOWN) {
-                turnRobot(30, 0.5);
+                turnRobot(60, 0.7);
 
                 // FIXED: Use runShootingSequence (looped) instead of runShootingActually (one-off)
-                runShootingSequence(4.0, 1750, 0.90);
+                runShootingSequence(4.0, 1450, 0.90);
                 
                 // Collect Balls Sequence
                 intakeRoller.setPower(1.0);
