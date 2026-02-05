@@ -68,39 +68,12 @@ public class FarLeftAutonomous extends LinearOpMode {
 
                 // FIXED: Use runShootingSequence (looped) instead of runShootingActually (one-off)
                 runShootingSequence(4.0, 1800, 0.90);
-                
-                // Collect Balls Sequence
-                intakeRoller.setPower(1.0);
-                leftIntakeGate.setPower(0.8);
-                rightIntakeGate.setPower(0.8);
-                leftConveyorBelt.setPower(-0.8);
-                rightConveyorBelt.setPower(-0.8);
-
-                // Curve LEFT
-                driveCurve(30.0, 52.0, 0.5);
-
-                // Straight to collect balls
-                driveDistance(7, 0.2, false);
-//                sleep(100);
-                stopAllMechanisms();
-
-                driveDistance(-5, 0.7, false);
-                driveCurve(-30.0, -52.0, 0.6);
-                // Start return motors
-
-                leftConveyorBelt.setPower(-1.0);
-                rightConveyorBelt.setPower(-1.0);
-                leftIntakeGate.setPower(-1.0);
-                rightIntakeGate.setPower(-1.0);
-                sleep(200);
-                intakeRoller.setPower(1.0);
-                leftIntakeGate.setPower(1.0);
-                rightIntakeGate.setPower(1.0);
-                leftConveyorBelt.setPower(-1.0);
-                rightConveyorBelt.setPower(-1.0);
-                // Final shooting
-                runShootingSequence(4.0, 1800, 0.90);
+    // first Line
+                pickUpFromLines(30.0, 52.0, 0.5, 0.7);
 //Second line
+                pickUpFromLines(54.0, 76.0, 0.5, 0.7);
+// third line
+                pickUpFromLines(78.0, 100.0, 0.5, 0.7);
 
 
                 showLiveStats();
@@ -109,6 +82,41 @@ public class FarLeftAutonomous extends LinearOpMode {
                 telemetry.update();
             }
         }
+    }
+
+    public void pickUpFromLines(double leftInches, double rightInches, double powerOn, double powerOff) {
+        // Collect Balls Sequence
+        intakeRoller.setPower(1.0);
+        leftIntakeGate.setPower(0.8);
+        rightIntakeGate.setPower(0.8);
+        leftConveyorBelt.setPower(-0.8);
+        rightConveyorBelt.setPower(-0.8);
+
+        // Curve LEFT
+        driveCurve(leftInches, rightInches, powerOn);
+
+        // Straight to collect balls
+        driveDistance(7, 0.2, false);
+//                sleep(100);
+        stopAllMechanisms();
+
+        driveDistance(-5, 0.7, false);
+        driveCurve(-leftInches, -rightInches, powerOff);
+        // Start return motors
+
+        leftConveyorBelt.setPower(-1.0);
+        rightConveyorBelt.setPower(-1.0);
+        leftIntakeGate.setPower(-1.0);
+        rightIntakeGate.setPower(-1.0);
+        sleep(200);
+        intakeRoller.setPower(1.0);
+        leftIntakeGate.setPower(1.0);
+        rightIntakeGate.setPower(1.0);
+        leftConveyorBelt.setPower(-1.0);
+        rightConveyorBelt.setPower(-1.0);
+        // Final shooting
+        runShootingSequence(4.0, 1800, 0.90);
+
     }
 
     /**
