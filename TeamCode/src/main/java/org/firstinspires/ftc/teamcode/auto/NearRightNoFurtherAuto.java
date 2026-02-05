@@ -13,9 +13,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.Arrays;
 
-@Autonomous(name = "Near Right Auto")
+@Autonomous(name = "Near Right No Further Auto")
 
-public class NearRightAutonomous extends LinearOpMode {
+public class NearRightNoFurtherAuto extends LinearOpMode {
 
     private void driveCurve(double leftInches, double rightInches, double power) {
         double countsPerInch = COUNTS_PER_MOTOR_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
@@ -332,11 +332,6 @@ public class NearRightAutonomous extends LinearOpMode {
         // Step 2: Turn to read sequnce based on selectedAlliance
         telemetry.addLine("Step 2: Turning to read sequence.");
         telemetry.update();
-        // if (selectedAlliance == GoalDirection.RIGHT) {
-        //         turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
-        // } else { // Alliance is BLUE
-        //     turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn Right for LEFT side Alliance
-        // }
         sleep(100);
         //Step2 : turn left to scan the sequence
         turnRobot(-100.0, 0.7);  // Turn LEFT: 45degrees
@@ -349,7 +344,7 @@ public class NearRightAutonomous extends LinearOpMode {
 
         telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
         telemetry.update();
-        //  sleep(500);
+          sleep(500);
 
         // --- Conditional Logic: Only proceed if a sequence was found ---
         if (detectedSequence[0] != BallColor.UNKNOWN) {
@@ -364,24 +359,6 @@ public class NearRightAutonomous extends LinearOpMode {
             telemetry.update();
             runShootingSequence(2.0, 1250, 0.90, detectedSequence);
             sleep(100); // Run shooter for 1.5 seconds
-
-            telemetry.addLine("Step 6a: turning right to collect balls...");
-            telemetry.update();
-            turnRobot(110.0, 0.7);// assuming the ball collector will pull all the balls within its path
-            telemetry.addLine("Step 6b: drive towards the balls..");
-            telemetry.update();
-            driveMecanum(42, 0, 0.3); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
-            sleep (100);
-            telemetry.addLine("Step 6c: drive 90 degrees to collect balls");
-            telemetry.addLine("Step 6d: Drive back to line");
-            telemetry.update();
-         driveMecanum(-42, 0, 0.7); //Drive 36 inches back
-
-            turnRobot(-100.0, 0.7);// turn towards goalpost //make it +90 if rotation is not correct.
-            telemetry.addLine("Step 10: Shoot 3 balls...");
-            telemetry.update();
-            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
-
 
             turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
 

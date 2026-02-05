@@ -13,9 +13,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.Arrays;
 
-@Autonomous(name = "Near Left Auto")
+@Autonomous(name = "Near Left No Further Auto")
 
-public class NearLeftAutonomous extends LinearOpMode {
+public class NearLeftNoFurtherAuto extends LinearOpMode {
 
     // --- ROBOT CONSTANTS (Tune These!) ---
     static final double COUNTS_PER_MOTOR_REV = 537.7;    // For goBILDA 5203-series motor
@@ -99,24 +99,7 @@ public class NearLeftAutonomous extends LinearOpMode {
             telemetry.addLine("Step 5: Shoot 3 balls...");
             telemetry.update();
             runShootingSequence(2.0, 1250, 0.90, detectedSequence);
-
-
             sleep(100); // Run shooter for 1.5 seconds
-
-            telemetry.addLine("Step 6a: turning left to collect balls...");
-            telemetry.update();
-            turnRobot(-110.0, 0.7);// assuming the ball collector will pull all the balls within its path
-            telemetry.addLine("Step 6b: drive towards the balls..");
-            telemetry.update();
-            driveMecanum(42, 0, 0.3); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
-            sleep (100);
-            driveMecanum(-42, 0, 0.7); //Drive 36 inches back
-
-            turnRobot(100.0, 0.7);// turn towards goalpost //make it +90 if rotation is not correct.
-            telemetry.addLine("Step 10: Shoot 3 balls...");
-            telemetry.update();
-            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
-
 
             turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Right for Left side Alliance
 

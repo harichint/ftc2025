@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.auto;
 
-import com.qualcomm.hardware.dfrobot.HuskyLens;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -11,8 +10,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.Arrays;
 
-@Autonomous(name = "Far Right Auto")
-public class FarRightAutonomous extends LinearOpMode {
+@Autonomous(name = "Far Right No Further Auto")
+public class FarRightNoFurtherAuto extends LinearOpMode {
 
     // --- HARDWARE ---
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
@@ -84,7 +83,11 @@ public class FarRightAutonomous extends LinearOpMode {
                 sleep(500); // Run shooter for 1.5 seconds
 
                 // Step 3: Reposition after shooting.
+                if (selectedAlliance == GoalDirection.RIGHT) {
                     turnRobot(-40, 0.5); // Turn LEFT to straighten out
+                } else { // Alliance is BLUE
+                    turnRobot(40, 0.5); // Turn RIGHT to straighten out
+                }
 
                 /** step 4: straighten robot and move 1 foot, then turn to left or right 90 degrees
                  * based on the GoalDirection, move  3 feet and intake balls, then come back 3 feet
