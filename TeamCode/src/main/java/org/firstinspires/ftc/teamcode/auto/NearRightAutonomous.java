@@ -357,7 +357,7 @@ public class NearRightAutonomous extends LinearOpMode {
             // Step 3: Turn towards the correct goal based on the selected alliance and the same angle as the steps 2.
             telemetry.addLine("Step 4: Turning towards goal...");
             telemetry.update();
-            turnRobot(130.0, 0.7); // Turn RIGHT for 45 degrees towards the goal post
+            turnRobot(110.0, 0.7); // Turn RIGHT for 45 degrees towards the goal post
 
             // Step 4: shooting. // based on sequence shoot
             telemetry.addLine("Step 5: Shoot 3 balls...");
