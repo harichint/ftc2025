@@ -78,13 +78,13 @@ public class NearLeftAutonomous extends LinearOpMode {
         sleep(100);
         //Step2 : turn left to scan the sequence
         turnRobot(110.0, 0.7);  // Turn RIGHT: 45degrees
-        driveMecanum(5, 0, 0.7);
+//        driveMecanum(5, 0, 0.7);
         sleep(100);
         // Step 3: Now that we have arrived, scan for the sequence tag obelisk.
         telemetry.addLine("Step 3: Arrived, now scanning obelisk...");
         telemetry.update();
         detectedSequence = readSequenceFromObelisk(3.0); // Scan for 2 seconds
-        driveMecanum(-5, 0, 0.7);
+//        driveMecanum(-5, 0, 0.7);
         telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
         telemetry.update();
         //  sleep(500);

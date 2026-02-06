@@ -290,7 +290,7 @@ public class NearRightAutonomous extends LinearOpMode {
     private final BallColor[] SEQ_1 = {BallColor.GREEN, BallColor.PURPLE, BallColor.PURPLE};
     private final BallColor[] SEQ_2 = {BallColor.PURPLE, BallColor.GREEN, BallColor.PURPLE};
     private final BallColor[] SEQ_3 = {BallColor.PURPLE, BallColor.PURPLE, BallColor.GREEN};
-    private FarLeftAutonomous.BallColor[] detectedSequence = {FarLeftAutonomous.BallColor.UNKNOWN, FarLeftAutonomous.BallColor.UNKNOWN, FarLeftAutonomous.BallColor.UNKNOWN};
+    private BallColor[] detectedSequence = {BallColor.UNKNOWN, BallColor.UNKNOWN, BallColor.UNKNOWN};
 
     // --- HARDWARE ---
     private DcMotor leftFrontDrive, rightFrontDrive, leftBackDrive, rightBackDrive;
@@ -325,28 +325,23 @@ public class NearRightAutonomous extends LinearOpMode {
         // --- AUTONOMOUS SEQUENCE ---
 
         // Step 1: Drive diagonally - 68 inches backward.
-        telemetry.addLine("Step 1: Driving 34 inches backward.");
+        telemetry.addLine("Step 1: Driving 40 inches backward.");
         telemetry.update();
         //  driveMecanum(-58, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
         driveMecanum(-40, 0, 0.7); //Drive 34 inches backward
         // Step 2: Turn to read sequnce based on selectedAlliance
         telemetry.addLine("Step 2: Turning to read sequence.");
         telemetry.update();
-        // if (selectedAlliance == GoalDirection.RIGHT) {
-        //         turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
-        // } else { // Alliance is BLUE
-        //     turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7);  // Turn Right for LEFT side Alliance
-        // }
         sleep(100);
         //Step2 : turn left to scan the sequence
-        turnRobot(-100.0, 0.7);  // Turn LEFT: 45degrees
-
+        turnRobot(-110.0, 0.7);  // Turn LEFT: 45degrees
+//        driveMecanum(5, 0, 0.7);
         sleep(100);
         // Step 3: Now that we have arrived, scan for the sequence tag obelisk.
         telemetry.addLine("Step 3: Arrived, now scanning obelisk...");
         telemetry.update();
-        BallColor[] detectedSequence = readSequenceFromObelisk(3.0); // Scan for 2 seconds
-
+        detectedSequence = readSequenceFromObelisk(3.0); // Scan for 2 seconds
+//        driveMecanum(-5, 0, 0.7);
         telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
         telemetry.update();
         //  sleep(500);
@@ -357,33 +352,26 @@ public class NearRightAutonomous extends LinearOpMode {
             // Step 3: Turn towards the correct goal based on the selected alliance and the same angle as the steps 2.
             telemetry.addLine("Step 4: Turning towards goal...");
             telemetry.update();
-            turnRobot(110.0, 0.7); // Turn RIGHT for 45 degrees towards the goal post
+            turnRobot(140.0, 0.7); // Turn RIGHT for 45 degrees towards the goal post
 
             // Step 4: shooting. // based on sequence shoot
             telemetry.addLine("Step 5: Shoot 3 balls...");
             telemetry.update();
             runShootingSequence(2.0, 1250, 0.90, detectedSequence);
+
+
             sleep(100); // Run shooter for 1.5 seconds
 
-            telemetry.addLine("Step 6a: turning right to collect balls...");
-            telemetry.update();
-            turnRobot(110.0, 0.7);// assuming the ball collector will pull all the balls within its path
-            telemetry.addLine("Step 6b: drive towards the balls..");
-            telemetry.update();
-            driveMecanum(42, 0, 0.3); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
-            sleep (100);
-            telemetry.addLine("Step 6c: drive 90 degrees to collect balls");
-            telemetry.addLine("Step 6d: Drive back to line");
-            telemetry.update();
-         driveMecanum(-42, 0, 0.7); //Drive 36 inches back
+            // first line
+            pickUpLineShoot(110.0, 100, 42, detectedSequence);
 
-            turnRobot(-100.0, 0.7);// turn towards goalpost //make it +90 if rotation is not correct.
-            telemetry.addLine("Step 10: Shoot 3 balls...");
-            telemetry.update();
-            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
+            // second line
+            pickUpLineShoot(134.0, 124, 66, detectedSequence);
 
+            // third line
+            pickUpLineShoot(158.0, 148, 90, detectedSequence);
 
-            turnRobot(-OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Left for Right side Alliance
+            turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Right for Left side Alliance
 
             driveDistance(-30, 0.4);  // Move backward
         } else {
@@ -392,6 +380,27 @@ public class NearRightAutonomous extends LinearOpMode {
             telemetry.update();
         }
 
-        sleep(500); // End of OpMode
+//        sleep(500); // End of OpMode
     }
+
+
+    public void pickUpLineShoot(double angleBack, double angleForward, double backwardInches, BallColor[] detectedSequence)  {
+        telemetry.addLine("Step 6a: turning left to collect balls...");
+        telemetry.update();
+        turnRobot(angleBack, 0.7);// assuming the ball collector will pull all the balls within its path
+        telemetry.addLine("Step 6b: drive towards the balls..");
+        telemetry.update();
+        driveMecanum(backwardInches, 0, 0.3); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
+        sleep (100);
+        driveMecanum(-backwardInches, 0, 0.7); //Drive 36 inches back
+
+        turnRobot(-angleForward, 0.7);// turn towards goalpost //make it +90 if rotation is not correct.
+        telemetry.addLine("Step 10: Shoot 3 balls...");
+        telemetry.update();
+        runShootingSequence(2.0, 1250, 0.90, detectedSequence);
+
+
+    }
+
+
 }
