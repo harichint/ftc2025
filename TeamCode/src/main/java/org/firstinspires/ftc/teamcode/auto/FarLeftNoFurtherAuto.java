@@ -70,7 +70,7 @@ public class FarLeftNoFurtherAuto extends LinearOpMode {
 //                turnRobot(60, 0.7);
 
                 // FIXED: Use runShootingSequence (looped) instead of runShootingActually (one-off)
-                runShootingSequence(4.0, 1450, 0.90);
+                runShootingSequence(4.0, 1850, 0.90);
                 
                 // Collect Balls Sequence
 //                intakeRoller.setPower(1.0);
