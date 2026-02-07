@@ -98,7 +98,7 @@ public class NearLeftNoFurtherAuto extends LinearOpMode {
             // Step 4: shooting. // based on sequence shoot
             telemetry.addLine("Step 5: Shoot 3 balls...");
             telemetry.update();
-            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
+            runShootingSequence(2.5, 1300, 0.90, detectedSequence);
             sleep(100); // Run shooter for 1.5 seconds
 
             turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Right for Left side Alliance

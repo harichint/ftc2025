@@ -67,7 +67,7 @@ public class FarRightNoFurtherAuto extends LinearOpMode {
             // Step 1: Now that we have arrived, scan for the sequence tag obelisk.
             telemetry.addLine("Step 2: Arrived, now scanning obelisk...");
             telemetry.update();
-            BallColor[] detectedSequence = SEQ_3;//readSequenceFromObelisk(2.0); // Scan for 2 seconds
+            BallColor[] detectedSequence = readSequenceFromObelisk(1.0); // Scan for 2 seconds
 
             telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
             telemetry.update();
@@ -82,65 +82,10 @@ public class FarRightNoFurtherAuto extends LinearOpMode {
                 telemetry.update();
                 sleep(500); // Run shooter for 1.5 seconds
 
-                // Step 3: Reposition after shooting.
-                if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(-40, 0.5); // Turn LEFT to straighten out
-                } else { // Alliance is BLUE
-                    turnRobot(40, 0.5); // Turn RIGHT to straighten out
-                }
-
-                /** step 4: straighten robot and move 1 foot, then turn to left or right 90 degrees
-                 * based on the GoalDirection, move  3 feet and intake balls, then come back 3 feet
-                 * turn opposite to goaldirection 90 degrees and move back 1 foot.
-                 * then run the shooting sequence
-                 * **/
-                // --- Step 5: Reposition, Intake, and Shoot Again ---
-                telemetry.addLine("Step 4: Straightening and moving to intake...");
-                telemetry.update();
-
                 // 1. Move forward 1 foot (12 inches) to clear the shooting area
                 driveDistance(12, 0.5);
 
-                // 2. Turn 90 degrees based on GoalDirection
-                // If goal was RIGHT (turned right to shoot), we are now facing "right-ish".
-                // We turn 90 degrees towards the side of the field to find balls.
-                double sideTurnAngle = (selectedAlliance == GoalDirection.RIGHT) ? 130 : -130;
-                turnRobot(sideTurnAngle, 0.5);
 
-                // 3. Move 3 feet (36 inches) out to where the balls are
-                intakeRoller.setPower(0.8); // Start intake
-                leftIntakeGate.setPower(0.8);
-                leftConveyorBelt.setPower(-0.8);
-                rightConveyorBelt.setPower(-0.8);
-                driveDistance(36, 0.3);
-                // 4. Intake Balls
-                telemetry.addLine("Intaking balls...");
-                telemetry.update();
-
-                driveDistance(6, 0.1);      // Slow crawl forward to ensure pickup
-                sleep(800);                // Wait a second to suck balls in
-                intakeRoller.setPower(0);   // Stop intake
-                leftIntakeGate.setPower(0);
-                leftConveyorBelt.setPower(0);
-                rightConveyorBelt.setPower(0);
-
-                // 5. Come back 3 feet (plus the 6 inches we crawled)
-                driveDistance(-42, 0.6);
-
-                // 6. Turn opposite to goal direction 90 degrees to face the goal again
-                turnRobot(-sideTurnAngle, 0.5);
-
-                // 7. Move back 1 foot to return to the shooting line
-                driveDistance(-12, 0.5);
-                if (selectedAlliance == GoalDirection.RIGHT) {
-                    turnRobot(15, 0.5); // Turn LEFT to straighten out
-                } else { // Alliance is BLUE
-                    turnRobot(-15, 0.5); // Turn RIGHT to straighten out
-                }
-                // 8. Run the shooting sequence again with the newly intaked balls
-                telemetry.addLine("Step 5 Complete: Re-shooting...");
-                telemetry.update();
-                runShootingSequence(detectedSequence);
             } else {
                 // If the obelisk scan failed, stop here.
                 telemetry.addLine("ERROR: No sequence found. Stopping.");

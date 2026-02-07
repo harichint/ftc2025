@@ -52,10 +52,10 @@ public class FarLeftNoFurtherAuto extends LinearOpMode {
             telemetry.update();
 
             // Step 1: Drive forward and scan.
-            double distanceToTag = driveMecanum(-50, 0, 0.7, true);
-            turnRobot(-60, 0.7);
+//            double distanceToTag = driveMecanum(-50, 0, 0.7, true);
+//            turnRobot(-60, 0.7);
 
-            intakeRoller.setPower(0.0);
+//            intakeRoller.setPower(0.0);
 
             if (detectedSequence[0] == BallColor.UNKNOWN) {
                 telemetry.addLine("Scanning one last time at stop...");
@@ -67,23 +67,23 @@ public class FarLeftNoFurtherAuto extends LinearOpMode {
             //driveMecanum(-distanceToTag, 0, 0.7, false);
 
             if (detectedSequence[0] != BallColor.UNKNOWN) {
-                turnRobot(60, 0.7);
+//                turnRobot(60, 0.7);
 
                 // FIXED: Use runShootingSequence (looped) instead of runShootingActually (one-off)
                 runShootingSequence(4.0, 1450, 0.90);
                 
                 // Collect Balls Sequence
-                intakeRoller.setPower(1.0);
-                leftIntakeGate.setPower(0.8);
-                rightIntakeGate.setPower(0.8);
-                leftConveyorBelt.setPower(-0.8);
-                rightConveyorBelt.setPower(-0.8);
+//                intakeRoller.setPower(1.0);
+//                leftIntakeGate.setPower(0.8);
+//                rightIntakeGate.setPower(0.8);
+//                leftConveyorBelt.setPower(-0.8);
+//                rightConveyorBelt.setPower(-0.8);
 
                 // Curve LEFT
-                driveCurve(40.0, 72.0, 0.5);
+//                driveCurve(40.0, 72.0, 0.5);
 
                 // Straight to collect balls
-                driveDistance(9, 0.2, false);
+                driveDistance(12, 0.2, false);
                 sleep(100);
                 stopAllMechanisms();
 
@@ -100,6 +100,7 @@ public class FarLeftNoFurtherAuto extends LinearOpMode {
 
                 // Final shooting
                 runShootingSequence(4.0, 1750, 0.90);
+                driveDistance(30, 0.7, false);
 
                 showLiveStats();
             } else {
