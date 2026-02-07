@@ -71,7 +71,7 @@ public class NearLeftAutonomous extends LinearOpMode {
         telemetry.addLine("Step 1: Driving 40 inches backward.");
         telemetry.update();
         //  driveMecanum(-58, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
-        driveMecanum(-40, 0, 0.7); //Drive 34 inches backward
+        driveMecanum(-40, 0, 0.7, false); //Drive 34 inches backward
         // Step 2: Turn to read sequnce based on selectedAlliance
         telemetry.addLine("Step 2: Turning to read sequence.");
         telemetry.update();
@@ -116,7 +116,7 @@ public class NearLeftAutonomous extends LinearOpMode {
 
             turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Right for Left side Alliance
 
-            driveDistance(-30, 0.4);  // Move backward
+            driveDistance(-30, 0.4, false);  // Move backward
         } else {
             // If the obelisk scan failed, stop here.
             telemetry.addLine("ERROR: No sequence found. Stopping.");
@@ -132,14 +132,14 @@ public class NearLeftAutonomous extends LinearOpMode {
         turnRobot(-angleBack, 0.7);// assuming the ball collector will pull all the balls within its path
         telemetry.addLine("Step 6b: drive towards the balls..");
         telemetry.update();
-        driveMecanum(backwardInches, 0, 0.3); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
+        driveMecanum(backwardInches, 0, 0.3, true); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
         sleep (100);
-        driveMecanum(-backwardInches, 0, 0.7); //Drive 36 inches back
+        driveMecanum(-backwardInches, 0, 0.7, false); //Drive 36 inches back
 
         turnRobot(angleForward, 0.7);// turn towards goalpost //make it +90 if rotation is not correct.
         telemetry.addLine("Step 10: Shoot 3 balls...");
         telemetry.update();
-        runShootingSequence(2.0, 1250, 0.90, detectedSequence);
+        runShootingSequence(2.0, 1150, 0.90, detectedSequence);
 
 
     }
@@ -172,34 +172,39 @@ public class NearLeftAutonomous extends LinearOpMode {
         rightConveyorBelt.setVelocity(targetVelocity);
 
         double threshold = targetVelocity * powerToUse;
-
-        // Added 50 tick tolerance to make ready checks more reliable
         boolean readyLeft = Math.abs(leftConveyorBelt.getVelocity()) >= (threshold - 50);
         boolean readyRight = Math.abs(rightConveyorBelt.getVelocity()) >= (threshold - 50);
-        
+
+        // Intake Roller logic
         if ((readyLeft || readyRight) && targetVelocity > 100) {
             intakeRoller.setPower(INTAKE_ROLLER_POWER);
         } else {
             intakeRoller.setPower(0);
         }
 
-        // Check if ANY color in sequence requires the gate to open
-        boolean openLeft = false;
-        boolean openRight = false;
+        // Determine if we NEED to open gates based on the sequence
+        boolean sequenceHasGreen = false;
+        boolean sequenceHasPurple = false;
+
         for (BallColor color : seq) {
-            if (color == BallColor.GREEN && readyRight && targetVelocity > 100) {
-                rightIntakeGate.setPower(GATE_SERVO_POWER);
-            } else {
-                rightIntakeGate.setPower(0);
-            }
-            if (color == BallColor.PURPLE && readyLeft && targetVelocity > 100) {
-                leftIntakeGate.setPower(GATE_SERVO_POWER);
-            } else {
-                leftIntakeGate.setPower(0);
-            }
+            if (color == BallColor.GREEN) sequenceHasGreen = true;
+            if (color == BallColor.PURPLE) sequenceHasPurple = true;
+        }
+
+        // Right Gate Logic (Green)
+        if (sequenceHasGreen && readyRight && targetVelocity > 100) {
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+        } else {
+            rightIntakeGate.setPower(0);
+        }
+
+        // Left Gate Logic (Purple)
+        if (sequenceHasPurple && readyLeft && targetVelocity > 100) {
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
+        } else {
+            leftIntakeGate.setPower(0);
         }
     }
-
     /** Performs a stationary scan for a sequence tag for a given duration. */
     private BallColor[] readSequenceFromObelisk(double scanSeconds) {
         ElapsedTime scanTimer = new ElapsedTime();
@@ -288,19 +293,17 @@ public class NearLeftAutonomous extends LinearOpMode {
     }
 
     /** Drives the robot a specific distance in inches using encoders. */
-    private void driveDistance(double distanceInches, double power) {
+    private void driveDistance(double distanceInches, double power, boolean intake) {
         if (!opModeIsActive()) return;
-        driveMecanum(distanceInches, 0, power); // Use the new method for straight movement
+        driveMecanum(distanceInches, 0, power, intake); // Use the new method for straight movement
     }
 
 
     /** Drives the robot diagonally using backward and strafe distances. */
-    private void driveMecanum(double backwardInches, double strafeInches, double power) {
+    private void driveMecanum(double backwardInches, double strafeInches, double power, boolean intake) {
         if (!opModeIsActive()) return;
-
         double countsPerInch = COUNTS_PER_MOTOR_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
 
-        // Mecanum drive formulas to calculate individual wheel targets
         int lfTicks = (int)((backwardInches + strafeInches) * countsPerInch);
         int rfTicks = (int)((backwardInches - strafeInches) * countsPerInch);
         int lbTicks = (int)((backwardInches - strafeInches) * countsPerInch);
@@ -311,10 +314,22 @@ public class NearLeftAutonomous extends LinearOpMode {
         setDriveRunMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         setDrivePower(power);
-        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
-            // Optional: telemetry while driving
+
+        // Turn on intake and conveyors if requested
+        if (intake) {
+            intakeRoller.setPower(INTAKE_ROLLER_POWER);
+            leftConveyorBelt.setPower(0.5);  // Run slow to pull balls in
+            rightConveyorBelt.setPower(0.5);
         }
+
+        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
+            showLiveStats(); // <--- SHOWS DISTANCE ALL THE TIME
+        }
+
         setDrivePower(0);
+        if (intake) {
+            stopAllMechanisms();
+        }
         setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 

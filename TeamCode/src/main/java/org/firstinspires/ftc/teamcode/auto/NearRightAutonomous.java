@@ -199,18 +199,15 @@ public class NearRightAutonomous extends LinearOpMode {
 
 
     /** Drives the robot a specific distance in inches using encoders. */
-    private void driveDistance(double distanceInches, double power) {
+    private void driveDistance(double distanceInches, double power, boolean intake) {
         if (!opModeIsActive()) return;
-        driveMecanum(distanceInches, 0, power); // Use the new method for straight movement
+        driveMecanum(distanceInches, 0, power, intake); // Use the new method for straight movement
     }
 
     /** Drives the robot diagonally using backward and strafe distances. */
-    private void driveMecanum(double backwardInches, double strafeInches, double power) {
-        if (!opModeIsActive()) return;
+    private void driveMecanum(double backwardInches, double strafeInches, double power, boolean intake) {
+        if (!opModeIsActive()) return;        double countsPerInch = COUNTS_PER_MOTOR_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
 
-        double countsPerInch = COUNTS_PER_MOTOR_REV / (Math.PI * WHEEL_DIAMETER_INCHES);
-
-        // Mecanum drive formulas to calculate individual wheel targets
         int lfTicks = (int)((backwardInches + strafeInches) * countsPerInch);
         int rfTicks = (int)((backwardInches - strafeInches) * countsPerInch);
         int lbTicks = (int)((backwardInches - strafeInches) * countsPerInch);
@@ -221,10 +218,22 @@ public class NearRightAutonomous extends LinearOpMode {
         setDriveRunMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         setDrivePower(power);
-        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
-            // Optional: telemetry while driving
+
+        // Turn on intake and conveyors if requested
+        if (intake) {
+            intakeRoller.setPower(INTAKE_ROLLER_POWER);
+            leftConveyorBelt.setPower(0.5);  // Run slow to pull balls in
+            rightConveyorBelt.setPower(0.5);
         }
+
+        while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
+            showLiveStats(); // <--- SHOWS DISTANCE ALL THE TIME
+        }
+
         setDrivePower(0);
+        if (intake) {
+            stopAllMechanisms();
+        }
         setDriveRunMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
@@ -328,19 +337,19 @@ public class NearRightAutonomous extends LinearOpMode {
         telemetry.addLine("Step 1: Driving 40 inches backward.");
         telemetry.update();
         //  driveMecanum(-58, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
-        driveMecanum(-40, 0, 0.7); //Drive 34 inches backward
+        driveMecanum(-40, 0, 0.7, false); //Drive 34 inches backward
         // Step 2: Turn to read sequnce based on selectedAlliance
         telemetry.addLine("Step 2: Turning to read sequence.");
         telemetry.update();
-        sleep(100);
+//        sleep(100);
         //Step2 : turn left to scan the sequence
-        turnRobot(-110.0, 0.7);  // Turn LEFT: 45degrees
+        turnRobot(-100.0, 0.7);  // Turn LEFT: 45degrees
 //        driveMecanum(5, 0, 0.7);
-        sleep(100);
+//        sleep(100);
         // Step 3: Now that we have arrived, scan for the sequence tag obelisk.
         telemetry.addLine("Step 3: Arrived, now scanning obelisk...");
         telemetry.update();
-        detectedSequence = readSequenceFromObelisk(3.0); // Scan for 2 seconds
+        detectedSequence = readSequenceFromObelisk(100); // Scan for 2 seconds
 //        driveMecanum(-5, 0, 0.7);
         telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
         telemetry.update();
@@ -352,7 +361,7 @@ public class NearRightAutonomous extends LinearOpMode {
             // Step 3: Turn towards the correct goal based on the selected alliance and the same angle as the steps 2.
             telemetry.addLine("Step 4: Turning towards goal...");
             telemetry.update();
-            turnRobot(140.0, 0.7); // Turn RIGHT for 45 degrees towards the goal post
+            turnRobot(110.0, 0.7); // Turn RIGHT for 45 degrees towards the goal post
 
             // Step 4: shooting. // based on sequence shoot
             telemetry.addLine("Step 5: Shoot 3 balls...");
@@ -360,20 +369,29 @@ public class NearRightAutonomous extends LinearOpMode {
             runShootingSequence(2.0, 1250, 0.90, detectedSequence);
 
 
-            sleep(100); // Run shooter for 1.5 seconds
+            sleep(300); // Run shooter for 1.5 seconds
 
             // first line
             pickUpLineShoot(110.0, 100, 42, detectedSequence);
+            telemetry.addLine("Step 10: Shoot 3 balls...");
+            telemetry.update();
+            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
 
             // second line
-            pickUpLineShoot(134.0, 124, 66, detectedSequence);
+            pickUpLineShoot(140.0, 100, 45, detectedSequence);
+            telemetry.addLine("Step 10: Shoot 3 balls...");
+            telemetry.update();
+            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
 
             // third line
-            pickUpLineShoot(158.0, 148, 90, detectedSequence);
+            pickUpLineShoot(170.0, 100, 48, detectedSequence);
+            telemetry.addLine("Step 10: Shoot 3 balls...");
+            telemetry.update();
+            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
 
             turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Right for Left side Alliance
 
-            driveDistance(-30, 0.4);  // Move backward
+            driveDistance(-30, 0.4, false);  // Move backward
         } else {
             // If the obelisk scan failed, stop here.
             telemetry.addLine("ERROR: No sequence found. Stopping.");
@@ -390,16 +408,12 @@ public class NearRightAutonomous extends LinearOpMode {
         turnRobot(angleBack, 0.7);// assuming the ball collector will pull all the balls within its path
         telemetry.addLine("Step 6b: drive towards the balls..");
         telemetry.update();
-        driveMecanum(backwardInches, 0, 0.3); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
-        sleep (100);
-        driveMecanum(-backwardInches, 0, 0.7); //Drive 36 inches back
+        driveMecanum(backwardInches, 0, 0.3, true); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
+//        sleep (100);
+        driveMecanum(-backwardInches, 0, 0.7, false); //Drive 36 inches back
 
         turnRobot(-angleForward, 0.7);// turn towards goalpost //make it +90 if rotation is not correct.
-        telemetry.addLine("Step 10: Shoot 3 balls...");
-        telemetry.update();
-        runShootingSequence(2.0, 1250, 0.90, detectedSequence);
-
-
+        sleep(100);
     }
 
 
