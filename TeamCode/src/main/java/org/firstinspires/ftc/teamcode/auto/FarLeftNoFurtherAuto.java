@@ -87,21 +87,6 @@ public class FarLeftNoFurtherAuto extends LinearOpMode {
                 sleep(100);
                 stopAllMechanisms();
 
-
-                driveDistance(-6, 0.2, false);
-                driveCurve(-40.0, -72.0, 0.5);
-                // Start return motors
-
-                leftConveyorBelt.setPower(-1.0);
-                rightConveyorBelt.setPower(-1.0);
-                leftIntakeGate.setPower(-0.8);
-                rightIntakeGate.setPower(-0.8);
-                sleep(500);
-
-                // Final shooting
-                runShootingSequence(4.0, 1750, 0.90);
-                driveDistance(30, 0.7, false);
-
                 showLiveStats();
             } else {
                 telemetry.addLine("ERROR: No sequence found. Stopping.");
