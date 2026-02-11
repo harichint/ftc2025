@@ -25,6 +25,8 @@ public class NearLeftAutonomous extends LinearOpMode {
     private static final double SHOOTER_CONVEYOR_POWER = 1.0;
     private static final double GATE_SERVO_POWER = 1.0;
     private static final double INTAKE_ROLLER_POWER = 1.0;
+    private static final double SLOWER_POWER = 0.8;
+
 
     private final BallColor[] SEQ_1 = {BallColor.GREEN, BallColor.PURPLE, BallColor.PURPLE};
     private final BallColor[] SEQ_2 = {BallColor.PURPLE, BallColor.GREEN, BallColor.PURPLE};
@@ -71,20 +73,21 @@ public class NearLeftAutonomous extends LinearOpMode {
         telemetry.addLine("Step 1: Driving 40 inches backward.");
         telemetry.update();
         //  driveMecanum(-58, 0, 0.7); // Drive 70 forward, 35 right, at 70% power
-        driveMecanum(-40, 0, 0.7, false); //Drive 34 inches backward
-        // Step 2: Turn to read sequnce based on selectedAlliance
-        telemetry.addLine("Step 2: Turning to read sequence.");
-        telemetry.update();
+        driveMecanum(-40, 0, 0.70, false); //Drive 34 inches backward
+
+        detectedSequence = SEQ_1;
         sleep(100);
         //Step2 : turn left to scan the sequence
-        turnRobot(110.0, 0.7);  // Turn RIGHT: 45degrees
-//        driveMecanum(5, 0, 0.7);
-        sleep(100);
+//        turnRobot(110.0, 0.7);  // Turn RIGHT: 45degrees
+////        driveMecanum(5, 0, 0.7);
+//        sleep(100);
         // Step 3: Now that we have arrived, scan for the sequence tag obelisk.
-        telemetry.addLine("Step 3: Arrived, now scanning obelisk...");
-        telemetry.update();
-        detectedSequence = readSequenceFromObelisk(3.0); // Scan for 2 seconds
+//        telemetry.addLine("Step 3: Arrived, now scanning obelisk...");
+//        telemetry.update();
+        detectedSequence = SEQ_1;//readSequenceFromObelisk(3.0); // Scan for 2 seconds
 //        driveMecanum(-5, 0, 0.7);
+        sleep(100);
+
         telemetry.addData("Sequence Found", Arrays.toString(detectedSequence));
         telemetry.update();
         //  sleep(500);
@@ -93,26 +96,23 @@ public class NearLeftAutonomous extends LinearOpMode {
         if (detectedSequence[0] != BallColor.UNKNOWN) {
 
             // Step 3: Turn towards the correct goal based on the selected alliance and the same angle as the steps 2.
-            telemetry.addLine("Step 4: Turning towards goal...");
-            telemetry.update();
-            turnRobot(-140.0, 0.7); // Turn LEFT for 45 degrees towards the goal post
+//            telemetry.addLine("Step 4: Turning towards goal...");
+//            telemetry.update();
+//            turnRobot(-140.0, 0.7); // Turn LEFT for 45 degrees towards the goal post
 
             // Step 4: shooting. // based on sequence shoot
             telemetry.addLine("Step 5: Shoot 3 balls...");
             telemetry.update();
-            runShootingSequence(2.0, 1250, 0.90, detectedSequence);
-
-
-            sleep(100); // Run shooter for 1.5 seconds
+            runShootingSequence(2.5, 1250, 0.90, detectedSequence);
 
            // first line
-            pickUpLineShoot(110.0, 100, 42, detectedSequence);
+            pickUpLineShoot(113.0, 101, 39, detectedSequence);
 
                 // second line
-            pickUpLineShoot(134.0, 124, 66, detectedSequence);
-
-            // third line
-            pickUpLineShoot(158.0, 148, 90, detectedSequence);
+//            pickUpLineShoot(134.0, 124, 66, detectedSequence);
+//
+//            // third line
+//            pickUpLineShoot(158.0, 148, 90, detectedSequence);
 
             turnRobot(OBELISK_SCAN_ANGLE_DEGREES, 0.7); // Turn Right for Left side Alliance
 
@@ -125,7 +125,7 @@ public class NearLeftAutonomous extends LinearOpMode {
 
 //        sleep(500); // End of OpMode
     }
-    
+
     public void pickUpLineShoot(double angleBack, double angleForward, double backwardInches, BallColor[] detectedSequence)  {
         telemetry.addLine("Step 6a: turning left to collect balls...");
         telemetry.update();
@@ -133,14 +133,12 @@ public class NearLeftAutonomous extends LinearOpMode {
         telemetry.addLine("Step 6b: drive towards the balls..");
         telemetry.update();
         driveMecanum(backwardInches, 0, 0.3, true); //Drive 36 inches fwd // for next set of balls  add + 24 and for the next one  + 24
-        sleep (100);
         driveMecanum(-backwardInches, 0, 0.7, false); //Drive 36 inches back
 
         turnRobot(angleForward, 0.7);// turn towards goalpost //make it +90 if rotation is not correct.
         telemetry.addLine("Step 10: Shoot 3 balls...");
         telemetry.update();
-        runShootingSequence(2.0, 1150, 0.90, detectedSequence);
-
+        runShootingSequence(3.0, 1250, 0.90, detectedSequence);
 
     }
 
@@ -151,7 +149,7 @@ public class NearLeftAutonomous extends LinearOpMode {
     public void runShootingSequence(double durationSeconds, double targetVelocity, double thresholdPercent, BallColor[] seq) {
         ElapsedTime shootTimer = new ElapsedTime();
         while (opModeIsActive() && shootTimer.seconds() < durationSeconds) {
-            runShootingActually(targetVelocity, thresholdPercent, seq);
+            runShootingActually(targetVelocity, thresholdPercent);
             showLiveStats(); // Updates telemetry every loop
             sleep(20);
         }
@@ -167,44 +165,52 @@ public class NearLeftAutonomous extends LinearOpMode {
         telemetry.update();
     }
 
-    public void runShootingActually(double targetVelocity, double powerToUse, BallColor[] seq) {
+    public void runShootingActually(double targetVelocity, double powerToUse) {
+        // 3. Apply Velocity
         leftConveyorBelt.setVelocity(targetVelocity);
         rightConveyorBelt.setVelocity(targetVelocity);
 
-        double threshold = targetVelocity * powerToUse;
-        boolean readyLeft = Math.abs(leftConveyorBelt.getVelocity()) >= (threshold - 50);
-        boolean readyRight = Math.abs(rightConveyorBelt.getVelocity()) >= (threshold - 50);
+        // 4. Trigger Gates ONLY when belts reach 90% of target velocity
+        // We lowered this from 95% to 90% to help the motors fire more reliably at lower powers
+        boolean readyToShootLeft =  Math.abs(leftConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse);
+        boolean readyToShootRight = Math.abs(rightConveyorBelt.getVelocity()) >= (targetVelocity * powerToUse) + 100;
 
-        // Intake Roller logic
-        if ((readyLeft || readyRight) && targetVelocity > 100) {
+        // Combined check: Both must be at speed, and the target must be valid
+        // Logic for Left side
+// We use 0.90 to trigger opening, but we could stay open as long as it's > 0.85
+// to prevent flickering when the pixel puts load on the motor.
+        if (readyToShootLeft && targetVelocity > 100) {
+            leftIntakeGate.setPower(GATE_SERVO_POWER);
+        } else {
+            // Only close the gate if it drops significantly below target
+            if (Math.abs(leftConveyorBelt.getVelocity()) < (targetVelocity * (powerToUse - 0.05))) {
+                leftIntakeGate.setPower(0);
+            }
+        }
+
+// Logic for Right side
+        if (readyToShootRight && targetVelocity > 100) {
+            rightIntakeGate.setPower(GATE_SERVO_POWER);
+        } else {
+            if (Math.abs(rightConveyorBelt.getVelocity()) < (targetVelocity * (powerToUse - 0.05))) {
+                rightIntakeGate.setPower(0);
+            }
+        }
+
+        // Intake Roller logic (only run if at least one side is ready to feed)
+        if ((readyToShootLeft || readyToShootRight) && targetVelocity > 100) {
             intakeRoller.setPower(INTAKE_ROLLER_POWER);
         } else {
             intakeRoller.setPower(0);
         }
+        // Telemetry to help the driver see why it may not be shooting yet
+        telemetry.addData("Target Velo", "%.0f", targetVelocity);
+        telemetry.addData("L-Vel Actual", "%.0f", leftConveyorBelt.getVelocity());
+        telemetry.addData("R-Vel Actual", "%.0f", rightConveyorBelt.getVelocity());
+        telemetry.addData("Ready to Shoot", (readyToShootLeft && readyToShootRight) ? "YES" : "SPINNING UP...");
 
-        // Determine if we NEED to open gates based on the sequence
-        boolean sequenceHasGreen = false;
-        boolean sequenceHasPurple = false;
-
-        for (BallColor color : seq) {
-            if (color == BallColor.GREEN) sequenceHasGreen = true;
-            if (color == BallColor.PURPLE) sequenceHasPurple = true;
-        }
-
-        // Right Gate Logic (Green)
-        if (sequenceHasGreen && readyRight && targetVelocity > 100) {
-            rightIntakeGate.setPower(GATE_SERVO_POWER);
-        } else {
-            rightIntakeGate.setPower(0);
-        }
-
-        // Left Gate Logic (Purple)
-        if (sequenceHasPurple && readyLeft && targetVelocity > 100) {
-            leftIntakeGate.setPower(GATE_SERVO_POWER);
-        } else {
-            leftIntakeGate.setPower(0);
-        }
     }
+
     /** Performs a stationary scan for a sequence tag for a given duration. */
     private BallColor[] readSequenceFromObelisk(double scanSeconds) {
         ElapsedTime scanTimer = new ElapsedTime();
@@ -318,8 +324,10 @@ public class NearLeftAutonomous extends LinearOpMode {
         // Turn on intake and conveyors if requested
         if (intake) {
             intakeRoller.setPower(INTAKE_ROLLER_POWER);
-            leftConveyorBelt.setPower(0.5);  // Run slow to pull balls in
-            rightConveyorBelt.setPower(0.5);
+            rightIntakeGate.setPower(SLOWER_POWER);
+            leftIntakeGate.setPower(SLOWER_POWER);
+            leftConveyorBelt.setPower(-SHOOTER_CONVEYOR_POWER);  // Run slow to pull balls in
+            rightConveyorBelt.setPower(-SHOOTER_CONVEYOR_POWER);
         }
 
         while (opModeIsActive() && (leftFrontDrive.isBusy() || rightFrontDrive.isBusy())) {
